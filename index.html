@@ -1,0 +1,2983 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner</title>
+<style>
+  :root {
+    --bg: #f8f6f2;
+    --surface: #ffffff;
+    --surface2: #f3f0eb;
+    --border: #e8e3dc;
+    --accent: #6b9e78;
+    --accent-light: #edf4ef;
+    --accent-dark: #4d7a59;
+    --text: #2c2c2c;
+    --text-muted: #7a7a7a;
+    --breakfast: #fef3e2;
+    --breakfast-border: #f5c842;
+    --lunch: #e8f4fd;
+    --lunch-border: #5aafdf;
+    --dinner: #fde8f0;
+    --dinner-border: #e0608a;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    height: 60px;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .logo span { font-size: 1.4rem; }
+
+  nav { display: flex; gap: 4px; flex: 1; }
+
+  nav button {
+    padding: 7px 18px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  nav button:hover { background: var(--surface2); color: var(--text); }
+  nav button.active { background: var(--accent-light); color: var(--accent-dark); font-weight: 600; }
+
+  .header-actions { display: flex; gap: 8px; margin-left: auto; }
+
+  .btn-icon {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: all 0.15s;
+  }
+  .btn-icon:hover { background: var(--surface2); }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-primary:disabled { background: #b5ceba; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--surface2); }
+
+  .btn-ghost {
+    background: none;
+    color: var(--accent-dark);
+    padding: 6px 10px;
+  }
+  .btn-ghost:hover { background: var(--accent-light); }
+
+  .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+  .btn-danger { background: #fee2e2; color: #dc2626; }
+  .btn-danger:hover { background: #fecaca; }
+
+  /* ── WEEK VIEW ── */
+  .week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .week-title { font-size: 1.4rem; font-weight: 700; }
+  .week-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-top: 2px; }
+
+  .week-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: 90px repeat(7, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .grid-cell {
+    background: var(--surface);
+    padding: 10px;
+    min-height: 80px;
+  }
+
+  .grid-header {
+    background: var(--surface2);
+    min-height: auto;
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .grid-header.today {
+    background: var(--accent-light);
+    color: var(--accent-dark);
+  }
+
+  .day-name { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .day-num { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+
+  .grid-row-label {
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    min-height: 90px;
+  }
+
+  .meal-slot {
+    min-height: 90px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .meal-slot.breakfast { background: var(--breakfast); }
+  .meal-slot.lunch { background: var(--lunch); }
+  .meal-slot.dinner { background: var(--dinner); }
+
+  .meal-slot:hover { filter: brightness(0.97); }
+
+  .meal-slot.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .meal-slot .add-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px dashed #ccc;
+    background: transparent;
+    font-size: 1.1rem;
+    color: #bbb;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .meal-slot.breakfast.empty .add-btn { border-color: var(--breakfast-border); color: var(--breakfast-border); }
+  .meal-slot.lunch.empty .add-btn { border-color: var(--lunch-border); color: var(--lunch-border); }
+  .meal-slot.dinner.empty .add-btn { border-color: var(--dinner-border); color: var(--dinner-border); }
+  .meal-slot .add-btn:hover { transform: scale(1.15); }
+
+  .meal-card-mini {
+    padding: 4px;
+    height: 100%;
+  }
+
+  .meal-card-mini .meal-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .meal-card-mini .meal-actions {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+  }
+
+  .meal-card-mini .meal-actions button {
+    padding: 2px 6px;
+    font-size: 0.68rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.7);
+    color: var(--text-muted);
+    transition: all 0.1s;
+  }
+
+  .meal-card-mini .meal-actions button:hover {
+    background: rgba(255,255,255,0.95);
+    color: var(--text);
+  }
+
+  /* ── SYNC STATUS ── */
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .sync-status:hover { background: var(--border); }
+
+  .sync-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .sync-status.syncing .sync-dot { background: #f59e0b; animation: pulse 1s infinite; }
+  .sync-status.synced  .sync-dot { background: #22c55e; }
+  .sync-status.error   .sync-dot { background: #ef4444; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @media (max-width: 600px) {
+    .sync-label { display: none; }
+    .sync-status { padding: 4px 6px; }
+  }
+
+  /* ── SLOT SAVED RECIPE PICKER ── */
+  .slot-pick-tab.active {
+    color: var(--accent-dark) !important;
+    border-bottom-color: var(--accent) !important;
+  }
+
+  .slot-saved-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s;
+    gap: 8px;
+  }
+
+  .slot-saved-item:hover { background: var(--accent-light); }
+
+  .slot-saved-item .ssi-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .slot-saved-item .ssi-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .slot-saved-item .ssi-add {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 99px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.12s;
+  }
+
+  .slot-saved-item .ssi-add:hover { background: var(--accent-dark); }
+
+  /* ── INGREDIENT BUILDER ── */
+  .ing-builder {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--surface2);
+  }
+
+  .ing-row {
+    display: grid;
+    grid-template-columns: 72px 110px 1fr 28px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .ing-row:last-child { border-bottom: none; }
+
+  .ing-row input, .ing-row select {
+    border: none;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+    padding: 7px 8px;
+    font-size: 0.82rem;
+    background: transparent;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ing-row input:last-of-type, .ing-row .ing-name {
+    border-right: none;
+  }
+
+  .ing-row input:focus, .ing-row select:focus {
+    background: #fffef8;
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    z-index: 1;
+    position: relative;
+  }
+
+  .ing-row .ing-name { border-right: 1px solid var(--border); }
+
+  .ing-row .ing-del {
+    width: 28px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+  }
+
+  .ing-del:hover { background: #fee2e2; color: #dc2626; }
+
+  .ing-builder-header {
+    display: grid;
+    grid-template-columns: 72px 110px 1fr 28px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .ing-builder-header span {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 0 8px;
+  }
+
+  .ing-add-row {
+    padding: 6px 8px;
+    background: var(--surface2);
+  }
+
+  .servings-control {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 5px;
+  }
+
+  .servings-control button {
+    width: 18px; height: 18px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s;
+    padding: 0;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  .servings-control button:hover { background: rgba(255,255,255,1); }
+
+  .servings-control .servings-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 14px;
+    text-align: center;
+    color: var(--text);
+  }
+
+  .servings-control .servings-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-left: 1px;
+  }
+
+  /* ── GROCERIES ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 28px 0 16px;
+  }
+
+  .section-title { font-size: 1.15rem; font-weight: 700; }
+
+  .grocery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .grocery-category {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .grocery-category h4 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .grocery-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+  }
+
+  .grocery-item:last-child { border-bottom: none; }
+
+  .grocery-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .grocery-item label {
+    cursor: pointer;
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .grocery-item input:checked + label {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  /* ── RECIPE SEARCH ── */
+  .recipes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    max-width: 520px;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+    background: var(--surface);
+  }
+
+  .search-bar input:focus { border-color: var(--accent); }
+
+  .recipe-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .recipe-tab {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+
+  .recipe-tab:hover { color: var(--text); }
+  .recipe-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .recipe-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .recipe-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .recipe-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--border);
+  }
+
+  .recipe-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .recipe-body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .recipe-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  .recipe-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .recipe-meta span { display: flex; align-items: center; gap: 3px; }
+
+  .recipe-ingredients {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
+    flex: 1;
+  }
+
+  .recipe-ingredients strong { color: var(--text); font-weight: 600; }
+
+  .recipe-footer {
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  /* ── MODAL ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .modal-title { font-size: 1.05rem; font-weight: 700; }
+
+  .modal-body { padding: 20px; }
+
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .close-btn {
+    width: 30px; height: 30px;
+    border: none;
+    background: var(--surface2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .close-btn:hover { background: var(--border); }
+
+  /* ── API KEY PROMPT ── */
+  .api-setup {
+    max-width: 480px;
+    margin: 60px auto;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+
+  .api-setup h2 { font-size: 1.5rem; margin-bottom: 8px; }
+  .api-setup p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.6; }
+
+  .api-setup input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .api-setup input:focus { border-color: var(--accent); }
+
+  /* ── FORM ELEMENTS ── */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+
+  input[type="text"], input[type="password"], select, textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+  /* ── LOADING ── */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  .spinner.dark {
+    border-color: rgba(0,0,0,0.15);
+    border-top-color: var(--accent);
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .empty-state p { font-size: 0.875rem; }
+
+  /* ── HISTORY ── */
+  .history-week {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .history-week h4 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .history-meals {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .history-meal-item {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    font-size: 0.78rem;
+  }
+
+  .history-meal-item .day-label {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  /* ── TOAST ── */
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: #1c1c1c;
+    color: white;
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn 0.25s ease;
+    max-width: 320px;
+  }
+
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  .toast.success { background: var(--accent-dark); }
+  .toast.error { background: #dc2626; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .badge-green { background: var(--accent-light); color: var(--accent-dark); }
+  .badge-yellow { background: #fef3e2; color: #b45309; }
+  .badge-blue { background: #e8f4fd; color: #1d6f9e; }
+
+  /* ── SETTINGS PANEL ── */
+  .settings-bar {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+
+  .settings-bar.open { display: block; }
+  .settings-bar h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; }
+
+  .settings-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .settings-row .form-group { margin-bottom: 0; flex: 1; min-width: 200px; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .week-grid {
+      grid-template-columns: 60px repeat(7, 1fr);
+      font-size: 0.75rem;
+    }
+
+    .grid-cell { padding: 6px; min-height: 70px; }
+    .grid-header { padding: 6px 4px; }
+    .day-name { font-size: 0.6rem; }
+    .day-num { font-size: 0.9rem; }
+    .grid-row-label { font-size: 0.6rem; padding: 4px; min-height: 70px; }
+    .meal-card-mini .meal-name { font-size: 0.68rem; }
+    .meal-card-mini .meal-actions { display: none; }
+    .servings-control .servings-label { display: none; }
+    .meal-slot .add-btn { width: 22px; height: 22px; font-size: 0.85rem; }
+
+    .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+    .header-inner { gap: 12px; }
+    nav button { padding: 6px 10px; font-size: 0.8rem; }
+    .logo { font-size: 1rem; }
+    .logo span { display: none; }
+  }
+
+  @media (max-width: 500px) {
+    .week-grid {
+      grid-template-columns: 44px repeat(7, 1fr);
+    }
+    .grocery-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── MISC ── */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--surface2);
+    color: var(--text-muted);
+    margin: 2px;
+  }
+
+  .select-slot-hint {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--accent-dark);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ai-generated-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 1px 6px;
+    border-radius: 99px;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo"><span>🥗</span> Meal Planner</div>
+    <nav>
+      <button id="nav-week" class="active" onclick="switchView('week')">This Week</button>
+      <button id="nav-recipes" onclick="switchView('recipes')">Recipes</button>
+    </nav>
+    <div class="header-actions">
+      <div id="sync-status" class="sync-status" title="Sync not configured" onclick="toggleSettings()">
+        <span class="sync-dot"></span>
+        <span class="sync-label" id="sync-label">Not synced</span>
+      </div>
+      <button class="btn-icon" title="Settings" onclick="toggleSettings()">⚙️</button>
+    </div>
+  </div>
+</header>
+
+<!-- SETTINGS BAR -->
+<div style="max-width:1200px;margin:0 auto;padding:0 20px;">
+  <div id="settings-bar" class="settings-bar">
+    <h3>⚙️ Settings</h3>
+
+    <!-- AI / Recipe API keys -->
+    <div class="settings-row" style="margin-bottom:12px;">
+      <div class="form-group" style="flex:2;min-width:280px;">
+        <label>Anthropic API Key (for AI suggestions)</label>
+        <input type="password" id="settings-api-key" placeholder="sk-ant-..." />
+      </div>
+      <div class="form-group" style="flex:1;min-width:180px;">
+        <label>Edamam App ID (optional)</label>
+        <input type="text" id="settings-edamam-id" placeholder="App ID" />
+      </div>
+      <div class="form-group" style="flex:1;min-width:180px;">
+        <label>Edamam App Key (optional)</label>
+        <input type="text" id="settings-edamam-key" placeholder="App Key" />
+      </div>
+    </div>
+
+    <!-- Sync section -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:0.8rem;font-weight:700;">☁️ Sync with partner</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">— share your meal plan across devices via JSONBin (free)</span>
+        <a href="https://jsonbin.io" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-dark);text-decoration:none;margin-left:auto;">Get a free key ↗</a>
+      </div>
+      <div class="settings-row">
+        <div class="form-group" style="flex:2;min-width:240px;">
+          <label>JSONBin Bin ID <span style="font-weight:400;color:var(--text-muted);">(shared with partner)</span></label>
+          <input type="text" id="settings-jsonbin-id" placeholder="64abc123..." />
+        </div>
+        <div class="form-group" style="flex:2;min-width:240px;">
+          <label>JSONBin Master Key <span style="font-weight:400;color:var(--text-muted);">(your own, private)</span></label>
+          <input type="password" id="settings-jsonbin-key" placeholder="$2a$10$..." />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+          <button class="btn btn-secondary btn-sm" onclick="createNewBin()" title="Create a new JSONBin and auto-fill the Bin ID">+ New bin</button>
+        </div>
+      </div>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.5;">
+        Both you and your partner need the same <strong>Bin ID</strong> and your <em>own</em> JSONBin Master Key.
+        Changes auto-sync within ~3 seconds. Your API keys are never synced.
+      </p>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ═══════════════════════════════════════ WEEK VIEW ═══════════════════════════════════════ -->
+  <div id="view-week" class="view active">
+
+    <div id="week-content">
+      <div class="week-header">
+        <div>
+          <div class="week-title" id="week-title">This Week</div>
+          <div class="week-subtitle" id="week-subtitle"></div>
+        </div>
+        <div class="week-actions">
+          <button class="btn btn-secondary btn-sm" onclick="clearWeek()">🗑 Clear Week</button>
+          <button class="btn btn-secondary btn-sm" onclick="saveWeekToHistory()">💾 Save to History</button>
+          <button id="auto-suggest-btn" class="btn btn-primary" onclick="autoSuggestWeek()">
+            ✨ Auto-suggest Week
+          </button>
+        </div>
+      </div>
+
+      <!-- WEEK GRID -->
+      <div class="week-grid" id="week-grid"></div>
+
+      <!-- GROCERY LIST -->
+      <div class="divider"></div>
+      <div class="section-header">
+        <div class="section-title">🛒 Grocery List</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyGroceryList()">📋 Copy list</button>
+          <button class="btn btn-secondary btn-sm" onclick="uncheckAll()">↺ Uncheck all</button>
+        </div>
+      </div>
+      <div id="grocery-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ RECIPES VIEW ═══════════════════════════════════════ -->
+  <div id="view-recipes" class="view">
+    <div class="recipes-header">
+      <div>
+        <h2 style="font-size:1.4rem;font-weight:700;">Recipes</h2>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="recipe-search-input" placeholder="Search recipes (e.g. pasta, chicken stir fry)…"
+          onkeydown="if(event.key==='Enter') searchRecipes()" />
+        <button class="btn btn-primary" onclick="searchRecipes()">Search</button>
+      </div>
+    </div>
+
+    <div class="recipe-tabs">
+      <button class="recipe-tab active" id="rtab-search" onclick="switchRecipeTab('search')">Search Results</button>
+      <button class="recipe-tab" id="rtab-mine" onclick="switchRecipeTab('mine')">📝 My Recipes</button>
+      <button class="recipe-tab" id="rtab-favorites" onclick="switchRecipeTab('favorites')">⭐ Favorites</button>
+      <button class="recipe-tab" id="rtab-history" onclick="switchRecipeTab('history')">📅 History</button>
+    </div>
+
+    <div id="rtab-content-search">
+      <div id="search-results" class="recipe-grid">
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="emoji">🔍</div>
+          <h3>Search for recipes</h3>
+          <p>Type a dish or ingredient above and press Search.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY RECIPES TAB -->
+    <div id="rtab-content-mine" style="display:none;">
+      <!-- URL Import -->
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
+        <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:12px;">🔗 Import from URL</h3>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Paste any recipe page URL and we'll extract the recipe. Requires an Anthropic API key.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="url" id="url-import-input" placeholder="https://www.allrecipes.com/recipe/…" style="flex:1;min-width:200px;" />
+          <button class="btn btn-primary" onclick="importFromUrl()">📥 Import</button>
+        </div>
+        <div id="url-import-status" style="margin-top:10px;font-size:0.82rem;color:var(--text-muted);"></div>
+      </div>
+
+      <!-- Manual Recipe Form -->
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
+        <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:16px;">✏️ Create a Recipe</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Recipe Name *</label>
+            <input type="text" id="new-recipe-name" placeholder="e.g. Mom's Chicken Soup" />
+          </div>
+          <div class="form-group">
+            <label>Prep / Cook Time</label>
+            <input type="text" id="new-recipe-time" placeholder="e.g. 30 min" />
+          </div>
+          <div class="form-group">
+            <label>Source URL (optional)</label>
+            <input type="url" id="new-recipe-url" placeholder="https://…" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Ingredients <span style="font-weight:400;color:var(--text-muted);">(per 1 serving)</span></label>
+            <div class="ing-builder" id="new-recipe-ing-builder">
+              <div class="ing-builder-header">
+                <span>Qty</span><span>Unit</span><span>Ingredient</span><span></span>
+              </div>
+              <div id="new-recipe-ing-rows"></div>
+            </div>
+            <div class="ing-add-row" style="margin-top:0;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface2);padding:6px 8px;">
+              <button class="btn btn-ghost btn-sm" onclick="addIngRow('new-recipe-ing-rows')" style="padding:4px 10px;">+ Add ingredient</button>
+            </div>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Notes / Instructions (optional)</label>
+            <textarea id="new-recipe-notes" rows="3" placeholder="Any notes about preparation…"></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCustomRecipe()">💾 Save Recipe</button>
+      </div>
+
+      <!-- Saved Custom Recipes -->
+      <div id="custom-recipes-grid" class="recipe-grid"></div>
+    </div>
+
+    <div id="rtab-content-favorites" style="display:none;">
+      <div id="favorites-grid" class="recipe-grid"></div>
+    </div>
+
+    <div id="rtab-content-history" style="display:none;">
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════ SLOT MODAL ═══════════════════════════════════════ -->
+<div id="slot-overlay" class="overlay" onclick="closeSlotModal(event)">
+  <div class="modal" id="slot-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="slot-modal-title">Choose a Meal</div>
+      <button class="close-btn" onclick="closeSlotModal(null, true)">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Manual entry (always available) -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">MEAL NAME</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input type="text" id="slot-manual-input" placeholder="e.g. Pasta Bolognese, Grilled Salmon…"
+            onkeydown="if(event.key==='Enter') addManualMeal()" style="flex:1;" />
+          <button class="btn btn-primary" onclick="addManualMeal()">+ Add</button>
+        </div>
+        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:5px;">Ingredients per 1 serving (optional)</label>
+        <div class="ing-builder">
+          <div class="ing-builder-header">
+            <span>Qty</span><span>Unit</span><span>Ingredient</span><span></span>
+          </div>
+          <div id="slot-ing-rows"></div>
+        </div>
+        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface2);padding:6px 8px;">
+          <button class="btn btn-ghost btn-sm" onclick="addIngRow('slot-ing-rows')" style="padding:4px 10px;">+ Add ingredient</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin:16px 0 12px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR PICK FROM SAVED</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+
+      <!-- Saved recipe picker tabs -->
+      <div style="display:flex;gap:2px;margin-bottom:10px;border-bottom:2px solid var(--border);">
+        <button class="slot-pick-tab active" id="spick-tab-mine" onclick="switchSlotPickTab('mine')"
+          style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
+          📝 My Recipes
+        </button>
+        <button class="slot-pick-tab" id="spick-tab-favs" onclick="switchSlotPickTab('favs')"
+          style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
+          ⭐ Favorites
+        </button>
+      </div>
+
+      <div id="slot-saved-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px;"></div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR SEARCH / AI</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <input type="text" id="slot-search-input" placeholder="Search recipes…"
+          onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
+        <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
+        <button id="slot-ai-btn" class="btn btn-primary" onclick="slotAISuggest()" title="Requires Anthropic API key">✨ AI</button>
+      </div>
+      <div id="slot-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ ADD TO PLAN MODAL ═══════════════════════════════════════ -->
+<div id="addplan-overlay" class="overlay" onclick="closeAddPlanModal(event)">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">Add to Plan</div>
+      <button class="close-btn" onclick="closeAddPlanModal(null, true)">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="addplan-recipe-name" style="font-weight:600;margin-bottom:16px;"></div>
+      <div class="form-group">
+        <label>Day</label>
+        <select id="addplan-day">
+          <option value="0">Monday</option>
+          <option value="1">Tuesday</option>
+          <option value="2">Wednesday</option>
+          <option value="3">Thursday</option>
+          <option value="4">Friday</option>
+          <option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Meal</label>
+        <select id="addplan-meal">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAddPlanModal(null, true)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddToPlan()">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════════
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const MEALS = ['breakfast','lunch','dinner'];
+const MEAL_EMOJIS = { breakfast: '☀️', lunch: '🌤', dinner: '🌙' };
+
+const GROCERY_CATEGORIES = {
+  produce: { label: 'Produce', emoji: '🥦', keywords: ['tomato','lettuce','spinach','kale','arugula','carrot','celery','onion','garlic','ginger','pepper','cucumber','zucchini','eggplant','broccoli','cauliflower','asparagus','mushroom','corn','pea','bean','lemon','lime','orange','apple','banana','berry','blueberry','strawberry','raspberry','avocado','mango','pineapple','grape','herbs','basil','parsley','cilantro','mint','dill','thyme','rosemary','sage','chive','scallion','leek','shallot','potato','sweet potato','yam','beet','radish','artichoke','cabbage','bok choy','fennel','squash','pumpkin','butternut','romaine','arugula','endive'] },
+  meat: { label: 'Meat & Seafood', emoji: '🥩', keywords: ['chicken','beef','pork','lamb','turkey','duck','salmon','tuna','shrimp','cod','tilapia','halibut','steak','ground beef','sausage','bacon','ham','prosciutto','pancetta','anchovy','crab','lobster','scallop','mussel','oyster','clam','sardine','fish','seafood','meat'] },
+  dairy: { label: 'Dairy & Eggs', emoji: '🧀', keywords: ['milk','cream','butter','cheese','cheddar','mozzarella','parmesan','feta','brie','gouda','ricotta','yogurt','sour cream','cream cheese','egg','eggs','half-and-half','ghee','whey'] },
+  grains: { label: 'Grains & Bread', emoji: '🍞', keywords: ['bread','flour','pasta','rice','noodle','tortilla','pita','baguette','roll','oat','quinoa','barley','farro','couscous','polenta','grits','crouton','breadcrumb','panko','cereal','granola','muffin','bagel','croissant','wrap','bun'] },
+  canned: { label: 'Canned & Dry Goods', emoji: '🥫', keywords: ['can','canned','beans','lentil','chickpea','tomato sauce','tomato paste','tomato puree','broth','stock','coconut milk','olive oil','oil','vinegar','soy sauce','hot sauce','worcestershire','mustard','ketchup','mayo','mayonnaise','honey','syrup','jam','jelly','nut butter','peanut butter','almond butter','salt','pepper','spice','herb','cumin','paprika','turmeric','coriander','cinnamon','vanilla','baking','sugar','brown sugar','flour','cornstarch','baking powder','baking soda','chocolate','cocoa','dried','raisin','nut','almond','walnut','cashew','peanut','pecan','pistachio','seed','sesame','sunflower','flaxseed','coconut','lentils','split pea','curry paste','miso','tahini','sriracha'] },
+  frozen: { label: 'Frozen', emoji: '🧊', keywords: ['frozen','ice cream','ice','popsicle'] },
+  other: { label: 'Other', emoji: '🛒', keywords: [] }
+};
+
+let state = {
+  plan: {}, // { 'Monday-breakfast': { name, ingredients, time, url, source, image } }
+  favorites: [],
+  history: [],
+  customRecipes: [],
+  groceryChecked: {},
+  searchResults: [],
+  pendingAddRecipe: null,
+  currentSlot: null, // { day, meal }
+  currentView: 'week',
+  currentRecipeTab: 'search',
+  apiKey: '',
+  edamamId: '',
+  edamamKey: '',
+  apiPromptShown: false,
+  // Sync
+  jsonbinId: '',
+  jsonbinKey: '',
+  lastSyncedAt: 0,
+};
+
+// ══════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════
+
+function init() {
+  loadFromStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  updateWeekTitle();
+  // Init ingredient builders
+  initIngBuilder('new-recipe-ing-rows');
+  initIngBuilder('slot-ing-rows');
+  // Start sync
+  syncSetup();
+  if (state.jsonbinId && state.jsonbinKey) pullFromCloud();
+}
+
+function loadFromStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mealplanner') || '{}');
+    state.plan = saved.plan || {};
+    state.favorites = saved.favorites || [];
+    state.history = saved.history || [];
+    state.customRecipes = saved.customRecipes || [];
+    state.groceryChecked = saved.groceryChecked || {};
+    state.apiKey = saved.apiKey || '';
+    state.edamamId = saved.edamamId || '';
+    state.edamamKey = saved.edamamKey || '';
+    state.apiPromptShown = saved.apiPromptShown || false;
+    state.jsonbinId = saved.jsonbinId || '';
+    state.jsonbinKey = saved.jsonbinKey || '';
+    state.lastSyncedAt = saved.lastSyncedAt || 0;
+  } catch(e) {}
+
+  // Populate settings fields
+  document.getElementById('settings-api-key').value = state.apiKey;
+  document.getElementById('settings-edamam-id').value = state.edamamId;
+  document.getElementById('settings-edamam-key').value = state.edamamKey;
+  document.getElementById('settings-jsonbin-id').value = state.jsonbinId;
+  document.getElementById('settings-jsonbin-key').value = state.jsonbinKey;
+}
+
+function saveToStorage() {
+  localStorage.setItem('mealplanner', JSON.stringify({
+    plan: state.plan,
+    favorites: state.favorites,
+    history: state.history,
+    customRecipes: state.customRecipes,
+    groceryChecked: state.groceryChecked,
+    apiKey: state.apiKey,
+    edamamId: state.edamamId,
+    edamamKey: state.edamamKey,
+    apiPromptShown: state.apiPromptShown,
+    jsonbinId: state.jsonbinId,
+    jsonbinKey: state.jsonbinKey,
+    lastSyncedAt: state.lastSyncedAt,
+  }));
+  // Trigger debounced cloud push if sync is configured
+  schedulePush();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════════════
+
+function switchView(v) {
+  state.currentView = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.getElementById('nav-' + v).classList.add('active');
+
+  if (v === 'recipes') {
+    renderFavorites();
+    renderHistory();
+    renderCustomRecipes();
+    // Show built-in recipes on first visit if no API keys are set
+    const container = document.getElementById('search-results');
+    if (container.querySelector('.empty-state') && !state.apiKey && !state.edamamId) {
+      loadBuiltinRecipes();
+    }
+  }
+}
+
+function switchRecipeTab(tab) {
+  state.currentRecipeTab = tab;
+  ['search','mine','favorites','history'].forEach(t => {
+    document.getElementById('rtab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('rtab-content-' + t).style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'mine') renderCustomRecipes();
+}
+
+function toggleSettings() {
+  const bar = document.getElementById('settings-bar');
+  bar.classList.toggle('open');
+}
+
+function saveSettings() {
+  state.apiKey = document.getElementById('settings-api-key').value.trim();
+  state.edamamId = document.getElementById('settings-edamam-id').value.trim();
+  state.edamamKey = document.getElementById('settings-edamam-key').value.trim();
+  const newBinId  = document.getElementById('settings-jsonbin-id').value.trim();
+  const newBinKey = document.getElementById('settings-jsonbin-key').value.trim();
+  const syncChanged = newBinId !== state.jsonbinId || newBinKey !== state.jsonbinKey;
+  state.jsonbinId  = newBinId;
+  state.jsonbinKey = newBinKey;
+  // Save directly (not via saveToStorage to avoid spurious push before keys are set)
+  localStorage.setItem('mealplanner', JSON.stringify({
+    plan: state.plan, favorites: state.favorites, history: state.history,
+    customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
+    apiKey: state.apiKey, edamamId: state.edamamId, edamamKey: state.edamamKey,
+    apiPromptShown: state.apiPromptShown,
+    jsonbinId: state.jsonbinId, jsonbinKey: state.jsonbinKey, lastSyncedAt: state.lastSyncedAt,
+  }));
+  toast('Settings saved!', 'success');
+  toggleSettings();
+  if (syncChanged && state.jsonbinId && state.jsonbinKey) {
+    syncSetup(); // restart sync with new credentials
+    pullFromCloud();
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+//  WEEK GRID
+// ══════════════════════════════════════════════════════════════════════
+
+function updateWeekTitle() {
+  const now = new Date();
+  const mon = getMonday(now);
+  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+  const opts = { month: 'short', day: 'numeric' };
+  document.getElementById('week-subtitle').textContent =
+    `${mon.toLocaleDateString('en-US', opts)} – ${sun.toLocaleDateString('en-US', opts)}, ${sun.getFullYear()}`;
+}
+
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+  dt.setDate(diff);
+  return dt;
+}
+
+function getTodayDayIndex() {
+  const day = new Date().getDay();
+  return day === 0 ? 6 : day - 1; // 0=Mon, 6=Sun
+}
+
+function renderWeekGrid() {
+  const grid = document.getElementById('week-grid');
+  const todayIdx = getTodayDayIndex();
+  const mon = getMonday(new Date());
+
+  let html = '';
+
+  // Top-left corner
+  html += `<div class="grid-cell grid-header"></div>`;
+
+  // Day headers
+  DAYS.forEach((day, i) => {
+    const dt = new Date(mon); dt.setDate(dt.getDate() + i);
+    const isToday = i === todayIdx;
+    html += `<div class="grid-cell grid-header ${isToday ? 'today' : ''}">
+      <div class="day-name">${day.slice(0,3)}</div>
+      <div class="day-num">${dt.getDate()}</div>
+    </div>`;
+  });
+
+  // Meal rows
+  MEALS.forEach(meal => {
+    html += `<div class="grid-cell grid-row-label">${MEAL_EMOJIS[meal]}<br>${meal}</div>`;
+    DAYS.forEach(day => {
+      const key = `${day}-${meal}`;
+      const slot = state.plan[key];
+      if (slot) {
+        const servings = slot.servings || 1;
+        html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}">
+          <div class="meal-card-mini">
+            <div class="meal-name">${escHtml(slot.name)}</div>
+            ${slot.source === 'ai' ? '<div class="ai-generated-badge">✨ AI</div>' : ''}
+            <div class="servings-control">
+              <button onclick="changeServings('${key}', -1)" title="Fewer servings">−</button>
+              <span class="servings-count">${servings}</span>
+              <button onclick="changeServings('${key}', 1)" title="More servings">+</button>
+              <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="meal-actions">
+              <button onclick="openSlotModal('${day}','${meal}')" title="Change">✏️</button>
+              <button onclick="removeMeal('${key}')" title="Remove">✕</button>
+              ${!isFavorite(slot.name) ? `<button onclick="saveFavoriteFromSlot('${key}')" title="Save">⭐</button>` : ''}
+            </div>
+          </div>
+        </div>`;
+      } else {
+        html += `<div class="grid-cell meal-slot ${meal} empty" data-key="${key}" onclick="openSlotModal('${day}','${meal}')">
+          <button class="add-btn">+</button>
+        </div>`;
+      }
+    });
+  });
+
+  grid.innerHTML = html;
+}
+
+function removeMeal(key) {
+  delete state.plan[key];
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  toast('Meal removed');
+}
+
+function changeServings(key, delta) {
+  if (!state.plan[key]) return;
+  const current = state.plan[key].servings || 1;
+  const next = Math.max(1, current + delta);
+  state.plan[key].servings = next;
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+}
+
+function clearWeek() {
+  if (!confirm('Clear all meals from this week?')) return;
+  state.plan = {};
+  state.groceryChecked = {};
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  toast('Week cleared');
+}
+
+function saveWeekToHistory() {
+  const hasMeals = Object.keys(state.plan).length > 0;
+  if (!hasMeals) { toast('No meals to save', 'error'); return; }
+
+  const mon = getMonday(new Date());
+  const weekLabel = mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const entry = { weekOf: weekLabel, plan: JSON.parse(JSON.stringify(state.plan)), savedAt: Date.now() };
+
+  // remove duplicate week
+  state.history = state.history.filter(h => h.weekOf !== weekLabel);
+  state.history.unshift(entry);
+  if (state.history.length > 4) state.history = state.history.slice(0, 4);
+  saveToStorage();
+  toast('Week saved to history!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SLOT MODAL
+// ══════════════════════════════════════════════════════════════════════
+
+let slotPickTab = 'mine';
+
+function switchSlotPickTab(tab) {
+  slotPickTab = tab;
+  document.querySelectorAll('.slot-pick-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('spick-tab-' + tab).classList.add('active');
+  renderSlotSavedList();
+}
+
+function renderSlotSavedList() {
+  const container = document.getElementById('slot-saved-list');
+  const list = slotPickTab === 'mine' ? state.customRecipes : state.favorites;
+
+  if (!list || !list.length) {
+    const label = slotPickTab === 'mine' ? 'No saved recipes yet — create some in the Recipes tab.' : 'No favorites yet — save recipes from search results.';
+    container.innerHTML = `<div style="padding:16px;text-align:center;font-size:0.82rem;color:var(--text-muted);">${label}</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map((r, i) => {
+    const storeKey = `_slot_saved_${slotPickTab}_${i}`;
+    window[storeKey] = r;
+    const ingCount = r.ingredients ? r.ingredients.length : 0;
+    const meta = [r.time, ingCount ? `${ingCount} ingredients` : ''].filter(Boolean).join(' · ');
+    return `<div class="slot-saved-item">
+      <div class="ssi-name" title="${escAttr(r.name)}">${escHtml(r.name)}</div>
+      ${meta ? `<div class="ssi-meta">${escHtml(meta)}</div>` : ''}
+      <button class="ssi-add" onclick="assignMealToSlot(window['${storeKey}'])">+ Add</button>
+    </div>`;
+  }).join('');
+}
+
+function openSlotModal(day, meal) {
+  state.currentSlot = { day, meal };
+  document.getElementById('slot-modal-title').textContent =
+    `${MEAL_EMOJIS[meal]} ${day} ${meal.charAt(0).toUpperCase() + meal.slice(1)}`;
+  document.getElementById('slot-search-input').value = '';
+  document.getElementById('slot-manual-input').value = '';
+  document.getElementById('slot-results').innerHTML = '';
+
+  // Reset ingredient builder
+  initIngBuilder('slot-ing-rows');
+
+  // Pre-fill with existing meal if editing
+  const key = `${day}-${meal}`;
+  if (state.plan[key]) {
+    document.getElementById('slot-manual-input').value = state.plan[key].name;
+    if (state.plan[key].ingredients && state.plan[key].ingredients.length) {
+      populateIngBuilder('slot-ing-rows', state.plan[key].ingredients);
+    }
+  }
+
+  // Show/hide AI button based on key presence
+  const aiBtn = document.getElementById('slot-ai-btn');
+  if (!state.apiKey) {
+    aiBtn.title = 'Add Anthropic API key in Settings to use AI';
+    aiBtn.style.opacity = '0.5';
+  } else {
+    aiBtn.title = 'AI suggest a meal';
+    aiBtn.style.opacity = '1';
+  }
+
+  // Render the saved recipe picker
+  renderSlotSavedList();
+
+  document.getElementById('slot-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('slot-manual-input').focus(), 50);
+}
+
+function addManualMeal() {
+  const name = document.getElementById('slot-manual-input').value.trim();
+  if (!name) { toast('Please enter a meal name', 'error'); return; }
+  const ingredients = collectIngRows('slot-ing-rows');
+  const recipe = { name, ingredients, time: '', url: '', source: 'manual', image: null };
+  assignMealToSlot(recipe);
+}
+
+function closeSlotModal(e, force) {
+  if (force || e.target === document.getElementById('slot-overlay')) {
+    document.getElementById('slot-overlay').classList.remove('open');
+    state.currentSlot = null;
+  }
+}
+
+async function slotSearch() {
+  const q = document.getElementById('slot-search-input').value.trim();
+  if (!q) return;
+  const results = document.getElementById('slot-results');
+
+  if (!state.apiKey && !state.edamamId) {
+    results.innerHTML = `<div class="empty-state">
+      <div class="emoji">🔑</div>
+      <h3>No API key configured</h3>
+      <p>Add an Anthropic or Edamam API key in <strong>Settings</strong> (⚙️) to enable recipe search. Or type a meal name in the box above and hit <strong>+ Add</strong>.</p>
+    </div>`;
+    return;
+  }
+
+  results.innerHTML = `<div class="loading-state"><div class="spinner dark"></div><div>Searching…</div></div>`;
+
+  let recipes = [];
+  try {
+    recipes = await searchRecipeAPI(q);
+  } catch(e) {
+    results.innerHTML = `<div class="empty-state"><div class="emoji">⚠️</div><h3>Search failed</h3><p>${escHtml(e.message)}</p></div>`;
+    return;
+  }
+
+  if (!recipes.length) {
+    results.innerHTML = `<div class="empty-state"><div class="emoji">😕</div><h3>No results found</h3><p>Try different keywords, or just type the meal name above and hit + Add.</p></div>`;
+    return;
+  }
+
+  results.innerHTML = recipes.map((r, i) => recipeCardHTML(r, i, 'slot')).join('');
+}
+
+async function slotAISuggest() {
+  if (!state.apiKey) { toast('Add your Anthropic API key in Settings', 'error'); return; }
+  const slot = state.currentSlot;
+  if (!slot) return;
+
+  const btn = document.querySelector('#slot-modal .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spinner"></div> Generating…`;
+
+  const results = document.getElementById('slot-results');
+  results.innerHTML = `<div class="loading-state"><div class="spinner dark"></div><div>AI is suggesting a meal…</div></div>`;
+
+  try {
+    const meal = await askClaudeForMeal(slot.meal, `a single ${slot.meal} idea`);
+    results.innerHTML = recipeCardHTML(meal, 0, 'slot');
+  } catch(e) {
+    results.innerHTML = `<div class="empty-state"><div class="emoji">⚠️</div><h3>Error</h3><p>${escHtml(e.message)}</p></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI Suggest';
+  }
+}
+
+function assignMealToSlot(recipe) {
+  if (!state.currentSlot) return;
+  const key = `${state.currentSlot.day}-${state.currentSlot.meal}`;
+  state.plan[key] = { ...recipe };
+  state.groceryChecked = {};
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  closeSlotModal(null, true);
+  toast(`Added "${recipe.name}" to ${state.currentSlot.day} ${state.currentSlot.meal}`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  AUTO SUGGEST WEEK
+// ══════════════════════════════════════════════════════════════════════
+
+async function autoSuggestWeek() {
+  if (!state.apiKey) { toast('Add your Anthropic API key in Settings first', 'error'); return; }
+
+  const btn = document.getElementById('auto-suggest-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spinner"></div> Generating week…`;
+
+  try {
+    const prompt = `Create a complete 7-day meal plan (Monday through Sunday) with breakfast, lunch, and dinner for each day.
+Return ONLY a JSON object (no markdown, no explanation) with this exact structure:
+{
+  "Monday": {
+    "breakfast": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" },
+    "lunch": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" },
+    "dinner": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" }
+  },
+  ... (all 7 days)
+}
+
+Requirements:
+- Varied and balanced meals throughout the week
+- Mix of cuisines (Mediterranean, Asian, American, Mexican, etc.)
+- Realistic meal names
+- ingredients: list 4-8 main ingredients for each meal
+- time: cooking time like "20 min", "45 min"
+- Keep it practical for home cooking`;
+
+    const data = await callClaude(prompt, 2048);
+    const text = data.content[0].text.trim();
+
+    // Extract JSON
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Invalid response from AI');
+    const week = JSON.parse(jsonMatch[0]);
+
+    // Populate plan
+    state.plan = {};
+    DAYS.forEach(day => {
+      if (week[day]) {
+        MEALS.forEach(meal => {
+          if (week[day][meal]) {
+            const m = week[day][meal];
+            state.plan[`${day}-${meal}`] = {
+              name: m.name || 'Meal',
+              ingredients: m.ingredients || [],
+              time: m.time || '',
+              url: m.url || '',
+              source: 'ai',
+              image: null,
+            };
+          }
+        });
+      }
+    });
+
+    state.groceryChecked = {};
+    saveToStorage();
+    renderWeekGrid();
+    renderGroceryList();
+    toast('Week generated!', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Auto-suggest Week';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INGREDIENT SCALING
+// ══════════════════════════════════════════════════════════════════════
+
+// Maps unicode vulgar fractions and written fractions to decimals
+const FRACTION_MAP = {
+  '½': 0.5, '⅓': 1/3, '⅔': 2/3, '¼': 0.25, '¾': 0.75,
+  '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875,
+  '1/2': 0.5, '1/3': 1/3, '2/3': 2/3, '1/4': 0.25, '3/4': 0.75,
+  '1/8': 0.125, '3/8': 0.375, '5/8': 0.625, '7/8': 0.875,
+  '1/6': 1/6, '5/6': 5/6, '1/5': 0.2, '2/5': 0.4, '3/5': 0.6, '4/5': 0.8,
+};
+
+// Convert a quantity string like "1 1/2" or "¾" to a number
+function parseQuantity(str) {
+  str = str.trim();
+  // Replace unicode fractions
+  for (const [frac, val] of Object.entries(FRACTION_MAP)) {
+    str = str.replace(frac, ` ${val}`);
+  }
+  // Handle "X Y/Z" mixed number (after replacements)
+  const parts = str.trim().split(/\s+/);
+  let total = 0;
+  for (const p of parts) {
+    if (p.includes('/')) {
+      const [n, d] = p.split('/');
+      total += parseFloat(n) / parseFloat(d);
+    } else {
+      const n = parseFloat(p);
+      if (!isNaN(n)) total += n;
+    }
+  }
+  return total || null;
+}
+
+// Format a number back to a readable fraction/decimal
+function formatQuantity(n) {
+  if (n === 0) return '0';
+  // Round to nearest 1/8
+  const eighth = Math.round(n * 8) / 8;
+  const whole = Math.floor(eighth);
+  const frac = eighth - whole;
+  const FRAC_LABELS = {
+    0: '', 0.125: '⅛', 0.25: '¼', 0.375: '⅜',
+    0.5: '½', 0.625: '⅝', 0.75: '¾', 0.875: '⅞',
+  };
+  const fracStr = FRAC_LABELS[Math.round(frac * 8) / 8] ?? '';
+  if (whole === 0) return fracStr || String(Math.round(n * 100) / 100);
+  return fracStr ? `${whole} ${fracStr}` : String(whole);
+}
+
+// Scale an ingredient string by a multiplier
+// e.g. "1 cup flour" × 3 → "3 cups flour"
+function scaleIngredient(ingredient, multiplier) {
+  if (multiplier === 1) return ingredient;
+  // Regex: optional leading number+fraction, then unit, then rest
+  // Matches: "2 cups", "1 1/2 tbsp", "¾ tsp", "3 large eggs", plain "salt"
+  const re = /^([\d\s\u00BC-\u00BE\u2150-\u215E\/]+)\s*(.*)/;
+  const match = ingredient.match(re);
+  if (!match) return ingredient; // no leading number, return as-is
+
+  const rawQty = match[1];
+  const rest = match[2];
+  const qty = parseQuantity(rawQty);
+  if (qty === null || qty === 0) return ingredient;
+
+  const scaled = qty * multiplier;
+  const formatted = formatQuantity(scaled);
+
+  // Basic pluralisation of common units
+  const plurals = {
+    'cup': 'cups', 'tablespoon': 'tablespoons', 'tbsp': 'tbsp',
+    'teaspoon': 'teaspoons', 'tsp': 'tsp', 'ounce': 'ounces', 'oz': 'oz',
+    'pound': 'pounds', 'lb': 'lbs', 'gram': 'grams', 'g': 'g',
+    'kg': 'kg', 'ml': 'ml', 'liter': 'liters', 'litre': 'litres',
+    'clove': 'cloves', 'slice': 'slices', 'piece': 'pieces',
+    'can': 'cans', 'package': 'packages', 'pkg': 'pkgs',
+    'bunch': 'bunches', 'head': 'heads', 'stalk': 'stalks',
+    'strip': 'strips', 'fillet': 'fillets', 'sheet': 'sheets',
+  };
+  // Try to pluralise first word of rest if it's a known unit
+  let scaledRest = rest;
+  if (scaled !== 1) {
+    const firstWord = rest.split(/\s+/)[0].toLowerCase();
+    for (const [sing, plur] of Object.entries(plurals)) {
+      if (firstWord === sing) {
+        scaledRest = rest.replace(new RegExp(`^${sing}`, 'i'), plur);
+        break;
+      }
+    }
+  }
+
+  return `${formatted} ${scaledRest}`.trim();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  GROCERY LIST
+// ══════════════════════════════════════════════════════════════════════
+
+function categorizeIngredient(ingredient) {
+  const lower = ingredient.toLowerCase();
+  for (const [catKey, cat] of Object.entries(GROCERY_CATEGORIES)) {
+    if (catKey === 'other') continue;
+    if (cat.keywords.some(kw => lower.includes(kw))) return catKey;
+  }
+  return 'other';
+}
+
+// Get the base ingredient name (strip leading quantity+unit) for deduplication
+function ingredientBaseName(ing) {
+  const re = /^[\d\s\u00BC-\u00BE\u2150-\u215E\/]+\s*(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|oz|ounces?|lbs?|pounds?|g|kg|ml|liters?|litres?|cloves?|slices?|pieces?|cans?|packages?|pkgs?|bunches?|heads?|stalks?|strips?|fillets?|sheets?)?\s*/i;
+  return ing.replace(re, '').toLowerCase().trim();
+}
+
+function renderGroceryList() {
+  const container = document.getElementById('grocery-list');
+
+  // Collect all ingredients scaled by servings
+  // Map: baseName → { displayText, totalQty, unit, cat, rawIng }
+  // For same ingredient across multiple meals, we add quantities
+  const ingMap = {}; // baseName → { scaled: string, qty: number|null, unit: string, rest: string, cat }
+
+  Object.values(state.plan).forEach(meal => {
+    const servings = meal.servings || 1;
+    if (!meal.ingredients || !meal.ingredients.length) return;
+    meal.ingredients.forEach(ing => {
+      if (!ing || !ing.trim()) return;
+      const scaled = scaleIngredient(ing.trim(), servings);
+      const base = ingredientBaseName(ing.trim());
+      const cat = categorizeIngredient(ing);
+
+      if (!ingMap[base]) {
+        ingMap[base] = { lines: [], cat };
+      }
+      ingMap[base].lines.push(scaled);
+    });
+  });
+
+  if (!Object.keys(ingMap).length) {
+    container.innerHTML = `<div class="empty-state"><div class="emoji">🛒</div><h3>No ingredients yet</h3><p>Add meals to your week to generate a grocery list.</p></div>`;
+    return;
+  }
+
+  // For ingredients that appear multiple times, try to sum quantities
+  const finalItems = [];
+  for (const [base, data] of Object.entries(ingMap)) {
+    if (data.lines.length === 1) {
+      finalItems.push({ text: data.lines[0], cat: data.cat });
+    } else {
+      // Try to merge: parse each, sum quantities if same unit, otherwise list all
+      const merged = tryMergeIngredients(data.lines);
+      finalItems.push({ text: merged, cat: data.cat });
+    }
+  }
+
+  // Categorize
+  const cats = {};
+  finalItems.forEach(item => {
+    if (!cats[item.cat]) cats[item.cat] = [];
+    cats[item.cat].push(item.text);
+  });
+
+  const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
+
+  let html = '<div class="grocery-grid">';
+  orderedCats.forEach(catKey => {
+    if (!cats[catKey] || !cats[catKey].length) return;
+    const cat = GROCERY_CATEGORIES[catKey];
+    html += `<div class="grocery-category">
+      <h4>${cat.emoji} ${cat.label}</h4>`;
+    cats[catKey].forEach((ing, i) => {
+      const id = `grocery-${catKey}-${i}`;
+      const checked = state.groceryChecked[id] ? 'checked' : '';
+      html += `<div class="grocery-item">
+        <input type="checkbox" id="${id}" ${checked} onchange="toggleGroceryItem('${id}', this.checked)">
+        <label for="${id}">${escHtml(ing)}</label>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// Try to sum scaled ingredient strings that refer to the same ingredient
+// e.g. ["2 cups flour", "1 cup flour"] → "3 cups flour"
+function tryMergeIngredients(lines) {
+  if (lines.length === 0) return '';
+  if (lines.length === 1) return lines[0];
+
+  // Extract leading qty + unit from each line
+  const unitRe = /^([\d\s½⅓⅔¼¾⅛⅜⅝⅞\/\.]+)\s*(cups?|tbsp|tablespoons?|tsp|teaspoons?|oz|ounces?|lbs?|pounds?|g\b|kg|ml|liters?|litres?|cloves?|slices?|pieces?|cans?|packages?|pkgs?|bunches?|heads?|stalks?|strips?|fillets?|sheets?)?\s*(.*)/i;
+
+  let totalQty = 0;
+  let unit = '';
+  let rest = '';
+  let canMerge = true;
+
+  for (const line of lines) {
+    const m = line.match(unitRe);
+    if (!m) { canMerge = false; break; }
+    const qty = parseQuantity(m[1]);
+    if (qty === null) { canMerge = false; break; }
+    const lineUnit = (m[2] || '').toLowerCase().replace(/s$/, ''); // singularise
+    const lineRest = m[3].trim();
+
+    if (unit === '' && lineUnit) unit = lineUnit;
+    if (rest === '') rest = lineRest;
+
+    // Units must match (or both be empty) to merge
+    const normUnit = lineUnit.replace(/s$/, '');
+    if (normUnit !== unit.replace(/s$/, '') && lineUnit !== '') { canMerge = false; break; }
+    totalQty += qty;
+  }
+
+  if (!canMerge) {
+    // Can't cleanly sum — join with " + "
+    return lines.join(' + ');
+  }
+
+  const formatted = formatQuantity(totalQty);
+  // Re-pluralise unit
+  const plurals2 = { 'cup':'cups','tablespoon':'tablespoons','teaspoon':'teaspoons',
+    'ounce':'ounces','pound':'pounds','clove':'cloves','slice':'slices',
+    'piece':'pieces','can':'cans','package':'packages','bunch':'bunches',
+    'head':'heads','stalk':'stalks','strip':'strips','fillet':'fillets','sheet':'sheets' };
+  const displayUnit = totalQty !== 1 && plurals2[unit] ? plurals2[unit] : unit;
+  return [formatted, displayUnit, rest].filter(Boolean).join(' ');
+}
+
+function toggleGroceryItem(id, checked) {
+  state.groceryChecked[id] = checked;
+  saveToStorage();
+}
+
+function uncheckAll() {
+  state.groceryChecked = {};
+  saveToStorage();
+  renderGroceryList();
+}
+
+function copyGroceryList() {
+  const items = [];
+  const ingMap = {};
+
+  Object.values(state.plan).forEach(meal => {
+    const servings = meal.servings || 1;
+    if (!meal.ingredients) return;
+    meal.ingredients.forEach(ing => {
+      if (!ing || !ing.trim()) return;
+      const scaled = scaleIngredient(ing.trim(), servings);
+      const base = ingredientBaseName(ing.trim());
+      const cat = categorizeIngredient(ing);
+      if (!ingMap[base]) ingMap[base] = { lines: [], cat };
+      ingMap[base].lines.push(scaled);
+    });
+  });
+
+  const cats = {};
+  for (const [, data] of Object.entries(ingMap)) {
+    const text = data.lines.length === 1 ? data.lines[0] : tryMergeIngredients(data.lines);
+    if (!cats[data.cat]) cats[data.cat] = [];
+    cats[data.cat].push(text);
+  }
+
+  const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
+  orderedCats.forEach(catKey => {
+    if (!cats[catKey] || !cats[catKey].length) return;
+    items.push(`\n${GROCERY_CATEGORIES[catKey].emoji} ${GROCERY_CATEGORIES[catKey].label.toUpperCase()}`);
+    cats[catKey].forEach(ing => items.push(`  • ${ing}`));
+  });
+
+  if (!items.length) { toast('Nothing to copy', 'error'); return; }
+
+  navigator.clipboard.writeText('GROCERY LIST\n' + items.join('\n'))
+    .then(() => toast('Copied to clipboard!', 'success'))
+    .catch(() => toast('Copy failed', 'error'));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RECIPE SEARCH
+// ══════════════════════════════════════════════════════════════════════
+
+function loadBuiltinRecipes() {
+  const container = document.getElementById('search-results');
+  const ideas = getBuiltinRecipes('');
+  state.searchResults = ideas;
+  container.innerHTML = `
+    <div style="grid-column:1/-1;margin-bottom:4px;">
+      <div class="select-slot-hint">💡 Showing built-in recipe ideas. Add an API key in ⚙️ Settings for full recipe search.</div>
+    </div>
+    ${ideas.map((r, i) => recipeCardHTML(r, i, 'search')).join('')}`;
+}
+
+async function searchRecipes() {
+  const q = document.getElementById('recipe-search-input').value.trim();
+
+  if (state.currentView !== 'recipes') switchView('recipes');
+  switchRecipeTab('search');
+
+  const container = document.getElementById('search-results');
+
+  // No API keys — search built-ins only
+  if (!state.apiKey && !state.edamamId) {
+    const ideas = getBuiltinRecipes(q);
+    state.searchResults = ideas;
+    container.innerHTML = `
+      <div style="grid-column:1/-1;margin-bottom:4px;">
+        <div class="select-slot-hint">💡 Showing built-in recipe ideas. Add an API key in ⚙️ Settings for full recipe search.</div>
+      </div>
+      ${ideas.map((r, i) => recipeCardHTML(r, i, 'search')).join('')}`;
+    return;
+  }
+
+  if (!q) return;
+
+  container.innerHTML = `<div class="loading-state" style="grid-column:1/-1"><div class="spinner dark"></div><div>Searching for "${escHtml(q)}"…</div></div>`;
+
+  let recipes = [];
+  try {
+    recipes = await searchRecipeAPI(q);
+  } catch(e) {
+    console.error(e);
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">⚠️</div><h3>Error</h3><p>${escHtml(e.message)}</p></div>`;
+    return;
+  }
+
+  state.searchResults = recipes;
+
+  if (!recipes.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">😕</div><h3>No results</h3><p>Try different keywords.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = recipes.map((r, i) => recipeCardHTML(r, i, 'search')).join('');
+}
+
+// Built-in recipe ideas (no API needed)
+const BUILTIN_RECIPES = [
+  { name: 'Spaghetti Bolognese', time: '45 min', ingredients: ['ground beef', 'spaghetti', 'tomato sauce', 'onion', 'garlic', 'olive oil', 'parmesan'], url: '', source: 'builtin', image: null },
+  { name: 'Grilled Chicken Salad', time: '20 min', ingredients: ['chicken breast', 'romaine lettuce', 'cherry tomatoes', 'cucumber', 'olive oil', 'lemon', 'feta cheese'], url: '', source: 'builtin', image: null },
+  { name: 'Veggie Stir-Fry', time: '15 min', ingredients: ['broccoli', 'bell pepper', 'snap peas', 'carrot', 'soy sauce', 'garlic', 'ginger', 'rice'], url: '', source: 'builtin', image: null },
+  { name: 'Avocado Toast', time: '10 min', ingredients: ['sourdough bread', 'avocado', 'lemon', 'red pepper flakes', 'eggs', 'olive oil'], url: '', source: 'builtin', image: null },
+  { name: 'Chicken Tacos', time: '25 min', ingredients: ['chicken breast', 'tortillas', 'salsa', 'sour cream', 'cheddar cheese', 'lettuce', 'lime'], url: '', source: 'builtin', image: null },
+  { name: 'Tomato Soup', time: '30 min', ingredients: ['canned tomatoes', 'onion', 'garlic', 'vegetable broth', 'cream', 'basil', 'butter'], url: '', source: 'builtin', image: null },
+  { name: 'Salmon with Roasted Veggies', time: '35 min', ingredients: ['salmon fillet', 'asparagus', 'cherry tomatoes', 'olive oil', 'garlic', 'lemon', 'dill'], url: '', source: 'builtin', image: null },
+  { name: 'Greek Salad', time: '10 min', ingredients: ['cucumber', 'tomatoes', 'red onion', 'kalamata olives', 'feta cheese', 'olive oil', 'oregano'], url: '', source: 'builtin', image: null },
+  { name: 'Omelette', time: '10 min', ingredients: ['eggs', 'butter', 'cheddar cheese', 'spinach', 'mushrooms', 'salt', 'pepper'], url: '', source: 'builtin', image: null },
+  { name: 'Lentil Soup', time: '40 min', ingredients: ['red lentils', 'onion', 'garlic', 'carrot', 'cumin', 'turmeric', 'vegetable broth', 'lemon'], url: '', source: 'builtin', image: null },
+  { name: 'Beef Stir-Fry', time: '20 min', ingredients: ['beef strips', 'broccoli', 'soy sauce', 'garlic', 'ginger', 'sesame oil', 'rice'], url: '', source: 'builtin', image: null },
+  { name: 'Pancakes', time: '20 min', ingredients: ['flour', 'eggs', 'milk', 'butter', 'baking powder', 'sugar', 'maple syrup'], url: '', source: 'builtin', image: null },
+  { name: 'Caprese Pasta', time: '20 min', ingredients: ['pasta', 'mozzarella', 'cherry tomatoes', 'basil', 'olive oil', 'garlic', 'balsamic glaze'], url: '', source: 'builtin', image: null },
+  { name: 'Baked Potato with Toppings', time: '60 min', ingredients: ['russet potato', 'butter', 'sour cream', 'cheddar cheese', 'bacon bits', 'chives'], url: '', source: 'builtin', image: null },
+  { name: 'Shrimp Fried Rice', time: '20 min', ingredients: ['shrimp', 'cooked rice', 'eggs', 'soy sauce', 'garlic', 'peas', 'sesame oil', 'scallions'], url: '', source: 'builtin', image: null },
+  { name: 'Banana Smoothie', time: '5 min', ingredients: ['banana', 'milk', 'yogurt', 'honey', 'peanut butter'], url: '', source: 'builtin', image: null },
+  { name: 'Chicken Curry', time: '40 min', ingredients: ['chicken', 'coconut milk', 'curry paste', 'onion', 'garlic', 'ginger', 'tomatoes', 'rice'], url: '', source: 'builtin', image: null },
+  { name: 'Caesar Salad', time: '15 min', ingredients: ['romaine lettuce', 'parmesan', 'croutons', 'caesar dressing', 'black pepper', 'lemon'], url: '', source: 'builtin', image: null },
+  { name: 'Grilled Cheese Sandwich', time: '10 min', ingredients: ['sourdough bread', 'cheddar cheese', 'butter', 'tomato'], url: '', source: 'builtin', image: null },
+  { name: 'Overnight Oats', time: '5 min', ingredients: ['rolled oats', 'milk', 'yogurt', 'honey', 'berries', 'chia seeds'], url: '', source: 'builtin', image: null },
+  { name: 'Black Bean Tacos', time: '15 min', ingredients: ['black beans', 'corn tortillas', 'avocado', 'salsa', 'lime', 'cilantro', 'sour cream'], url: '', source: 'builtin', image: null },
+  { name: 'Mushroom Risotto', time: '35 min', ingredients: ['arborio rice', 'mushrooms', 'onion', 'garlic', 'white wine', 'parmesan', 'butter', 'vegetable broth'], url: '', source: 'builtin', image: null },
+  { name: 'Tuna Salad Sandwich', time: '10 min', ingredients: ['canned tuna', 'mayo', 'celery', 'onion', 'lemon', 'bread', 'lettuce'], url: '', source: 'builtin', image: null },
+  { name: 'Turkey Meatballs', time: '30 min', ingredients: ['ground turkey', 'breadcrumbs', 'egg', 'garlic', 'parsley', 'parmesan', 'tomato sauce', 'pasta'], url: '', source: 'builtin', image: null },
+];
+
+function getBuiltinRecipes(query) {
+  if (!query) return [...BUILTIN_RECIPES].sort(() => Math.random() - 0.5).slice(0, 12);
+  const q = query.toLowerCase();
+  const scored = BUILTIN_RECIPES.map(r => {
+    let score = 0;
+    if (r.name.toLowerCase().includes(q)) score += 10;
+    if (r.ingredients.some(i => i.toLowerCase().includes(q))) score += 5;
+    return { r, score };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+  if (scored.length) return scored.map(x => x.r);
+  // No match — return random sample as inspiration
+  return [...BUILTIN_RECIPES].sort(() => Math.random() - 0.5).slice(0, 8);
+}
+
+async function searchRecipeAPI(query) {
+  if (state.edamamId && state.edamamKey) {
+    return await searchEdamam(query);
+  } else if (state.apiKey) {
+    return await searchViaAI(query);
+  } else {
+    throw new Error('Please add an API key (Anthropic or Edamam) in Settings to search recipes.');
+  }
+}
+
+async function searchEdamam(query) {
+  const url = `https://api.edamam.com/search?q=${encodeURIComponent(query)}&app_id=${state.edamamId}&app_key=${state.edamamKey}&to=12`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Edamam error ${res.status}`);
+  const data = await res.json();
+  return (data.hits || []).map(h => {
+    const r = h.recipe;
+    return {
+      name: r.label,
+      image: r.image,
+      time: r.totalTime ? `${r.totalTime} min` : '',
+      ingredients: (r.ingredientLines || []).slice(0, 8),
+      url: r.url,
+      source: 'edamam',
+      calories: r.calories ? Math.round(r.calories / (r.yield || 1)) + ' cal/serving' : '',
+      yield: r.yield,
+    };
+  });
+}
+
+async function searchViaAI(query) {
+  const prompt = `Generate 6 realistic recipes for "${query}".
+Return ONLY a JSON array (no markdown) with this structure:
+[
+  {
+    "name": "Recipe Name",
+    "time": "30 min",
+    "ingredients": ["ingredient 1", "ingredient 2", ...],
+    "description": "One sentence description",
+    "url": ""
+  }
+]
+Requirements: 6 varied recipes, 5-10 ingredients each, realistic cooking times.`;
+
+  const data = await callClaude(prompt, 1500);
+  const text = data.content[0].text.trim();
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) throw new Error('Invalid AI response');
+  const arr = JSON.parse(jsonMatch[0]);
+  return arr.map(r => ({ ...r, source: 'ai', image: null }));
+}
+
+async function askClaudeForMeal(mealType, description) {
+  const prompt = `Suggest ${description} for ${mealType}.
+Return ONLY a JSON object (no markdown):
+{
+  "name": "Meal Name",
+  "time": "cooking time",
+  "ingredients": ["ingredient 1", "ingredient 2", ...],
+  "description": "one sentence description",
+  "url": ""
+}
+Requirements: realistic, home-cooking friendly, 5-8 ingredients.`;
+
+  const data = await callClaude(prompt, 512);
+  const text = data.content[0].text.trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid AI response');
+  const meal = JSON.parse(jsonMatch[0]);
+  return { ...meal, source: 'ai', image: null };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RECIPE CARD
+// ══════════════════════════════════════════════════════════════════════
+
+function recipeCardHTML(r, i, context) {
+  const imgHtml = r.image
+    ? `<div class="recipe-img"><img src="${escAttr(r.image)}" alt="${escAttr(r.name)}" loading="lazy" onerror="this.parentElement.innerHTML='🍽'"></div>`
+    : `<div class="recipe-img">🍽</div>`;
+
+  const isFav = isFavorite(r.name);
+  const storeKey = `_tmp_recipe_${context}_${i}`;
+  window[storeKey] = r;
+
+  let footerBtns = '';
+
+  if (context === 'slot') {
+    footerBtns = `<button class="btn btn-primary btn-sm" onclick="assignMealToSlot(window['${storeKey}'])">+ Add to slot</button>`;
+  } else {
+    footerBtns = `<button class="btn btn-secondary btn-sm" onclick="openAddPlanModal(window['${storeKey}'])">📅 Add to plan</button>`;
+  }
+
+  footerBtns += ` <button class="btn btn-secondary btn-sm ${isFav ? 'btn-ghost' : ''}" onclick="toggleFavorite(window['${storeKey}'], this)">
+    ${isFav ? '⭐ Saved' : '☆ Save'}
+  </button>`;
+
+  if (r.url) {
+    footerBtns += `<a href="${escAttr(r.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 View</a>`;
+  }
+
+  return `<div class="recipe-card">
+    ${imgHtml}
+    <div class="recipe-body">
+      <div class="recipe-title">${escHtml(r.name)}</div>
+      <div class="recipe-meta">
+        ${r.time ? `<span>⏱ ${escHtml(r.time)}</span>` : ''}
+        ${r.calories ? `<span>🔥 ${escHtml(r.calories)}</span>` : ''}
+        ${r.source === 'ai' ? '<span class="ai-generated-badge">✨ AI</span>' : ''}
+        ${r.source === 'edamam' ? '<span class="badge badge-blue">Edamam</span>' : ''}
+        ${r.source === 'builtin' ? '<span class="badge badge-green">Built-in</span>' : ''}
+      </div>
+      <div class="recipe-ingredients">
+        <strong>Ingredients:</strong><br>
+        ${(r.ingredients || []).slice(0, 6).map(escHtml).join(', ')}
+        ${(r.ingredients || []).length > 6 ? ` <em>+${r.ingredients.length - 6} more</em>` : ''}
+      </div>
+      <div class="recipe-footer">${footerBtns}</div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  ADD TO PLAN MODAL
+// ══════════════════════════════════════════════════════════════════════
+
+function openAddPlanModal(recipe) {
+  state.pendingAddRecipe = recipe;
+  document.getElementById('addplan-recipe-name').textContent = recipe.name;
+
+  // Pre-select today
+  const todayIdx = getTodayDayIndex();
+  document.getElementById('addplan-day').value = todayIdx;
+  document.getElementById('addplan-meal').value = 'dinner';
+
+  document.getElementById('addplan-overlay').classList.add('open');
+}
+
+function closeAddPlanModal(e, force) {
+  if (force || e.target === document.getElementById('addplan-overlay')) {
+    document.getElementById('addplan-overlay').classList.remove('open');
+  }
+}
+
+function confirmAddToPlan() {
+  if (!state.pendingAddRecipe) return;
+  const dayIdx = parseInt(document.getElementById('addplan-day').value);
+  const meal = document.getElementById('addplan-meal').value;
+  const day = DAYS[dayIdx];
+  const key = `${day}-${meal}`;
+  state.plan[key] = { ...state.pendingAddRecipe };
+  state.groceryChecked = {};
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  closeAddPlanModal(null, true);
+  toast(`Added to ${day} ${meal}!`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  FAVORITES
+// ══════════════════════════════════════════════════════════════════════
+
+function isFavorite(name) {
+  return state.favorites.some(f => f.name === name);
+}
+
+function toggleFavorite(recipe, btn) {
+  if (isFavorite(recipe.name)) {
+    state.favorites = state.favorites.filter(f => f.name !== recipe.name);
+    if (btn) btn.innerHTML = '☆ Save';
+    toast('Removed from favorites');
+  } else {
+    state.favorites.unshift({ ...recipe, savedAt: Date.now() });
+    if (btn) btn.innerHTML = '⭐ Saved';
+    toast('Saved to favorites!', 'success');
+  }
+  saveToStorage();
+  renderFavorites();
+}
+
+function saveFavoriteFromSlot(key) {
+  const recipe = state.plan[key];
+  if (!recipe) return;
+  if (!isFavorite(recipe.name)) {
+    state.favorites.unshift({ ...recipe, savedAt: Date.now() });
+    saveToStorage();
+    renderFavorites();
+    renderWeekGrid();
+    toast('Saved to favorites!', 'success');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INGREDIENT BUILDER UI
+// ══════════════════════════════════════════════════════════════════════
+
+const UNITS = [
+  { value: '',      label: '— none —' },
+  // Volume
+  { value: 'tsp',   label: 'tsp' },
+  { value: 'tbsp',  label: 'tbsp' },
+  { value: 'fl oz', label: 'fl oz' },
+  { value: 'cup',   label: 'cup' },
+  { value: 'ml',    label: 'ml' },
+  { value: 'l',     label: 'liter' },
+  // Weight
+  { value: 'oz',    label: 'oz' },
+  { value: 'lb',    label: 'lb' },
+  { value: 'g',     label: 'g' },
+  { value: 'kg',    label: 'kg' },
+  // Count / other
+  { value: 'whole', label: 'whole' },
+  { value: 'clove', label: 'clove' },
+  { value: 'slice', label: 'slice' },
+  { value: 'can',   label: 'can' },
+  { value: 'pkg',   label: 'package' },
+  { value: 'bunch', label: 'bunch' },
+  { value: 'pinch', label: 'pinch' },
+  { value: 'dash',  label: 'dash' },
+  { value: 'piece', label: 'piece' },
+  { value: 'sprig', label: 'sprig' },
+  { value: 'strip', label: 'strip' },
+];
+
+const UNIT_SELECT_HTML = UNITS.map(u =>
+  `<option value="${u.value}">${u.label}</option>`
+).join('');
+
+// Create one blank ingredient row and append to containerId
+function addIngRow(containerId, qty = '', unit = '', name = '') {
+  const container = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'ing-row';
+  row.innerHTML = `
+    <input type="text" class="ing-qty" placeholder="1½" value="${escAttr(qty)}"
+      style="text-align:right;" />
+    <select class="ing-unit">${UNIT_SELECT_HTML}</select>
+    <input type="text" class="ing-name" placeholder="e.g. flour" value="${escAttr(name)}" />
+    <button class="ing-del" onclick="this.closest('.ing-row').remove()" title="Remove">✕</button>
+  `;
+  // Set unit value after inserting (can't do it via innerHTML easily)
+  row.querySelector('.ing-unit').value = unit;
+  // Tab from qty → unit → name
+  row.querySelector('.ing-qty').addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); row.querySelector('.ing-unit').focus(); }
+  });
+  row.querySelector('.ing-unit').addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); row.querySelector('.ing-name').focus(); }
+  });
+  // Enter on name adds next row
+  row.querySelector('.ing-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addIngRow(containerId); }
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); addIngRow(containerId); }
+  });
+  container.appendChild(row);
+  // Auto-focus the qty field of the new row
+  row.querySelector('.ing-qty').focus();
+}
+
+// Clear the container and add one blank row
+function initIngBuilder(containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  addIngRow(containerId);
+}
+
+// Parse an existing ingredient string like "1½ cups flour" into { qty, unit, name }
+function parseIngredientString(str) {
+  str = str.trim();
+  // Match leading qty (digits, spaces, fractions)
+  const qtyRe = /^([\d\s½⅓⅔¼¾⅛⅜⅝⅞\/\.]+)/;
+  const qtyMatch = str.match(qtyRe);
+  let qty = '';
+  let rest = str;
+  if (qtyMatch) {
+    qty = qtyMatch[1].trim();
+    rest = str.slice(qtyMatch[0].length).trim();
+  }
+  // Match unit
+  const unitValues = UNITS.map(u => u.value).filter(Boolean);
+  // Sort longest first to avoid partial matches
+  unitValues.sort((a, b) => b.length - a.length);
+  let unit = '';
+  for (const u of unitValues) {
+    const re = new RegExp(`^${u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i');
+    if (re.test(rest)) {
+      unit = u;
+      rest = rest.replace(re, '').trim();
+      break;
+    }
+  }
+  return { qty, unit, name: rest };
+}
+
+// Populate a builder from an array of ingredient strings
+function populateIngBuilder(containerId, ingredients) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (!ingredients || !ingredients.length) {
+    addIngRow(containerId);
+    return;
+  }
+  ingredients.forEach(ing => {
+    if (!ing || !ing.trim()) return;
+    const { qty, unit, name } = parseIngredientString(ing);
+    addIngRow(containerId, qty, unit, name);
+  });
+  // Always leave one blank row at the end
+  addIngRow(containerId);
+}
+
+// Read all rows and return array of ingredient strings like "1½ cups flour"
+function collectIngRows(containerId) {
+  const container = document.getElementById(containerId);
+  const rows = container.querySelectorAll('.ing-row');
+  const result = [];
+  rows.forEach(row => {
+    const qty  = row.querySelector('.ing-qty').value.trim();
+    const unit = row.querySelector('.ing-unit').value.trim();
+    const name = row.querySelector('.ing-name').value.trim();
+    if (!name) return; // skip empty name rows
+    const parts = [qty, unit, name].filter(Boolean);
+    result.push(parts.join(' '));
+  });
+  return result;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CUSTOM RECIPES & URL IMPORT
+// ══════════════════════════════════════════════════════════════════════
+
+function saveCustomRecipe() {
+  const name = document.getElementById('new-recipe-name').value.trim();
+  if (!name) { toast('Recipe name is required', 'error'); return; }
+  const ingredients = collectIngRows('new-recipe-ing-rows');
+  const recipe = {
+    id: Date.now(),
+    name,
+    time: document.getElementById('new-recipe-time').value.trim(),
+    url: document.getElementById('new-recipe-url').value.trim(),
+    notes: document.getElementById('new-recipe-notes').value.trim(),
+    ingredients,
+    source: 'custom',
+    image: null,
+    createdAt: Date.now(),
+  };
+  state.customRecipes.unshift(recipe);
+  saveToStorage();
+  renderCustomRecipes();
+  // Clear form
+  ['new-recipe-name','new-recipe-time','new-recipe-url','new-recipe-notes']
+    .forEach(id => document.getElementById(id).value = '');
+  initIngBuilder('new-recipe-ing-rows');
+  toast('Recipe saved!', 'success');
+}
+
+function deleteCustomRecipe(id) {
+  if (!confirm('Delete this recipe?')) return;
+  state.customRecipes = state.customRecipes.filter(r => r.id !== id);
+  saveToStorage();
+  renderCustomRecipes();
+  toast('Recipe deleted');
+}
+
+function renderCustomRecipes() {
+  const container = document.getElementById('custom-recipes-grid');
+  if (!state.customRecipes.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">📝</div><h3>No custom recipes yet</h3><p>Create one above or import from a URL.</p></div>`;
+    return;
+  }
+  container.innerHTML = state.customRecipes.map((r, i) => {
+    const storeKey = `_tmp_recipe_custom_${i}`;
+    window[storeKey] = r;
+    const isFav = isFavorite(r.name);
+    const imgHtml = `<div class="recipe-img">📝</div>`;
+    let footerBtns = `<button class="btn btn-secondary btn-sm" onclick="openAddPlanModal(window['${storeKey}'])">📅 Add to plan</button>`;
+    footerBtns += ` <button class="btn btn-secondary btn-sm" onclick="toggleFavorite(window['${storeKey}'], this)">${isFav ? '⭐ Saved' : '☆ Save'}</button>`;
+    if (r.url) footerBtns += ` <a href="${escAttr(r.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 View</a>`;
+    footerBtns += ` <button class="btn btn-danger btn-sm" onclick="deleteCustomRecipe(${r.id})">🗑</button>`;
+    return `<div class="recipe-card">
+      ${imgHtml}
+      <div class="recipe-body">
+        <div class="recipe-title">${escHtml(r.name)}</div>
+        <div class="recipe-meta">
+          ${r.time ? `<span>⏱ ${escHtml(r.time)}</span>` : ''}
+          <span class="badge badge-green">Custom</span>
+        </div>
+        <div class="recipe-ingredients">
+          <strong>Ingredients:</strong><br>
+          ${r.ingredients.slice(0,6).map(escHtml).join(', ')}
+          ${r.ingredients.length > 6 ? ` <em>+${r.ingredients.length - 6} more</em>` : ''}
+        </div>
+        ${r.notes ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;font-style:italic;">${escHtml(r.notes.slice(0,120))}${r.notes.length>120?'…':''}</div>` : ''}
+        <div class="recipe-footer">${footerBtns}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function importFromUrl() {
+  const url = document.getElementById('url-import-input').value.trim();
+  const status = document.getElementById('url-import-status');
+  if (!url) { toast('Please enter a URL', 'error'); return; }
+  if (!url.startsWith('http')) { toast('Please enter a valid URL starting with http', 'error'); return; }
+
+  if (!state.apiKey) {
+    status.innerHTML = `<span style="color:#dc2626;">⚠️ An Anthropic API key is required to import from URLs. Add one in ⚙️ Settings.</span>`;
+    return;
+  }
+
+  status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Fetching and parsing recipe…</span>`;
+
+  try {
+    // Fetch the page via a CORS proxy (public, read-only)
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Could not fetch the page. The site may block external requests.');
+    const data = await res.json();
+    const html = data.contents || '';
+
+    // Strip tags to plain text (simple approach)
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    // Remove scripts/styles
+    div.querySelectorAll('script,style,nav,footer,header,aside').forEach(el => el.remove());
+    const text = div.innerText || div.textContent || '';
+    const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 4000);
+
+    if (!snippet) throw new Error('Page appears empty or could not be read.');
+
+    const prompt = `Extract the recipe from this webpage text and return ONLY a JSON object (no markdown):
+{
+  "name": "Recipe name",
+  "time": "total cook/prep time",
+  "ingredients": ["ingredient 1", "ingredient 2", ...],
+  "notes": "brief description or key instructions (2-3 sentences max)",
+  "url": "${url}"
+}
+
+Webpage text:
+${snippet}`;
+
+    const aiData = await callClaude(prompt, 1024);
+    const aiText = aiData.content[0].text.trim();
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse recipe from page.');
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!parsed.name) throw new Error('No recipe name found on page.');
+
+    // Pre-fill the form
+    document.getElementById('new-recipe-name').value = parsed.name || '';
+    document.getElementById('new-recipe-time').value = parsed.time || '';
+    document.getElementById('new-recipe-url').value = url;
+    initIngBuilder('new-recipe-ing-rows');
+    populateIngBuilder('new-recipe-ing-rows', parsed.ingredients || []);
+    document.getElementById('new-recipe-notes').value = parsed.notes || '';
+    document.getElementById('url-import-input').value = '';
+
+    status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe imported! Review the details below and click Save.</span>`;
+
+    // Scroll to form
+    document.getElementById('new-recipe-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('new-recipe-name').focus();
+
+  } catch(e) {
+    console.error(e);
+    status.innerHTML = `<span style="color:#dc2626;">⚠️ ${escHtml(e.message)}</span>`;
+  }
+}
+
+function renderFavorites() {
+  const container = document.getElementById('favorites-grid');
+  if (!state.favorites.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">⭐</div><h3>No favorites yet</h3><p>Save recipes from search results or meal slots.</p></div>`;
+    return;
+  }
+  container.innerHTML = state.favorites.map((r, i) => recipeCardHTML(r, i, 'favorites')).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════════════════════════════
+
+function renderHistory() {
+  const container = document.getElementById('history-list');
+  if (!state.history.length) {
+    container.innerHTML = `<div class="empty-state"><div class="emoji">📅</div><h3>No history yet</h3><p>Save your current week using "Save to History" to track past meal plans.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = state.history.map((entry, hi) => {
+    const mealItems = [];
+    DAYS.forEach(day => {
+      MEALS.forEach(meal => {
+        const key = `${day}-${meal}`;
+        if (entry.plan[key]) {
+          mealItems.push(`<div class="history-meal-item">
+            <div class="day-label">${day.slice(0,3)} ${meal}</div>
+            <div>${escHtml(entry.plan[key].name)}</div>
+          </div>`);
+        }
+      });
+    });
+
+    return `<div class="history-week">
+      <h4>
+        <span>Week of ${escHtml(entry.weekOf)}</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadHistoryWeek(${hi})">📋 Restore week</button>
+      </h4>
+      <div class="history-meals">${mealItems.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function loadHistoryWeek(index) {
+  if (!confirm('This will replace your current week. Continue?')) return;
+  state.plan = JSON.parse(JSON.stringify(state.history[index].plan));
+  state.groceryChecked = {};
+  saveToStorage();
+  switchView('week');
+  renderWeekGrid();
+  renderGroceryList();
+  toast('Week restored!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CLAUDE API
+// ══════════════════════════════════════════════════════════════════════
+
+async function callClaude(prompt, maxTokens = 1024) {
+  if (!state.apiKey) throw new Error('No Anthropic API key. Add one in Settings.');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════════════════════════
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escAttr(str) {
+  return escHtml(str);
+}
+
+function toast(msg, type = '') {
+  const ct = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  ct.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CLOUD SYNC (JSONBin)
+// ══════════════════════════════════════════════════════════════════════
+
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+let _pushTimer = null;
+let _pollTimer = null;
+
+// Fields that sync to the cloud (API keys stay local)
+function getSharedData() {
+  return {
+    plan: state.plan,
+    favorites: state.favorites,
+    history: state.history,
+    customRecipes: state.customRecipes,
+    groceryChecked: state.groceryChecked,
+    _updatedAt: Date.now(),
+  };
+}
+
+function setSyncStatus(status, label) {
+  const el = document.getElementById('sync-status');
+  const lb = document.getElementById('sync-label');
+  if (!el) return;
+  el.className = 'sync-status' + (status ? ' ' + status : '');
+  el.title = label;
+  if (lb) lb.textContent = label;
+}
+
+function relativeTime(ts) {
+  if (!ts) return 'never';
+  const diff = Math.round((Date.now() - ts) / 1000);
+  if (diff < 10) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  return `${Math.round(diff / 3600)}h ago`;
+}
+
+async function pushToCloud() {
+  if (!state.jsonbinId || !state.jsonbinKey) return;
+  setSyncStatus('syncing', 'Syncing…');
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/${state.jsonbinId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': state.jsonbinKey,
+      },
+      body: JSON.stringify(getSharedData()),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    state.lastSyncedAt = Date.now();
+    // Save lastSyncedAt locally without re-triggering push
+    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
+    raw.lastSyncedAt = state.lastSyncedAt;
+    localStorage.setItem('mealplanner', JSON.stringify(raw));
+    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+  } catch(e) {
+    setSyncStatus('error', `Sync error: ${e.message}`);
+  }
+}
+
+async function pullFromCloud() {
+  if (!state.jsonbinId || !state.jsonbinKey) return;
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/${state.jsonbinId}/latest`, {
+      headers: { 'X-Master-Key': state.jsonbinKey },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const remote = data.record;
+    if (!remote) return;
+
+    // Only apply if remote is newer than last sync
+    const remoteTs = remote._updatedAt || 0;
+    if (remoteTs <= state.lastSyncedAt) {
+      setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+      return;
+    }
+
+    // Apply remote data
+    state.plan          = remote.plan          || state.plan;
+    state.favorites     = remote.favorites     || state.favorites;
+    state.history       = remote.history       || state.history;
+    state.customRecipes = remote.customRecipes || state.customRecipes;
+    state.groceryChecked= remote.groceryChecked|| state.groceryChecked;
+    state.lastSyncedAt  = remoteTs;
+
+    // Persist locally (direct, not via saveToStorage to avoid push loop)
+    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
+    Object.assign(raw, {
+      plan: state.plan, favorites: state.favorites, history: state.history,
+      customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
+      lastSyncedAt: state.lastSyncedAt,
+    });
+    localStorage.setItem('mealplanner', JSON.stringify(raw));
+
+    // Re-render everything
+    renderWeekGrid();
+    renderGroceryList();
+    renderFavorites();
+    renderCustomRecipes();
+    renderHistory();
+    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+  } catch(e) {
+    setSyncStatus('error', `Sync error: ${e.message}`);
+  }
+}
+
+// Debounced push — called by saveToStorage
+function schedulePush() {
+  if (!state.jsonbinId || !state.jsonbinKey) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushToCloud, 3000);
+  setSyncStatus('syncing', 'Pending…');
+}
+
+function syncSetup() {
+  // Clear any existing poll timer
+  if (_pollTimer) clearInterval(_pollTimer);
+
+  if (!state.jsonbinId || !state.jsonbinKey) {
+    setSyncStatus('', 'Not configured');
+    return;
+  }
+
+  setSyncStatus('syncing', 'Connecting…');
+  // Poll every 30 seconds for remote changes
+  _pollTimer = setInterval(pullFromCloud, 30000);
+  // Update the relative time label every minute
+  setInterval(() => {
+    if (state.lastSyncedAt) setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+  }, 60000);
+}
+
+async function createNewBin() {
+  const key = document.getElementById('settings-jsonbin-key').value.trim();
+  if (!key) {
+    toast('Enter your JSONBin Master Key first', 'error');
+    return;
+  }
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  try {
+    const res = await fetch(JSONBIN_BASE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': key,
+        'X-Bin-Name': 'Meal Planner',
+        'X-Bin-Private': 'true',
+      },
+      body: JSON.stringify(getSharedData()),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — check your Master Key`);
+    const data = await res.json();
+    const binId = data.metadata?.id;
+    if (!binId) throw new Error('No bin ID returned');
+    document.getElementById('settings-jsonbin-id').value = binId;
+    toast(`✅ Bin created! ID: ${binId}`, 'success');
+  } catch(e) {
+    toast(`Failed: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ New bin';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════════════════
+
+init();
+</script>
+</body>
+</html>
