@@ -2927,10 +2927,10 @@ async function createNewBin() {
   btn.disabled = true;
   btn.textContent = 'Creating…';
   try {
-    const res = await fetch(`${NPOINT_BASE}/bins`, {
+    const res = await fetch(`https://www.npoint.io/documents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(getSharedData()),
+      body: JSON.stringify({ contents: getSharedData(), title: 'Meal Planner' }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
