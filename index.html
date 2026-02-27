@@ -1064,25 +1064,20 @@
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span style="font-size:0.8rem;font-weight:700;">☁️ Sync with partner</span>
-        <span style="font-size:0.75rem;color:var(--text-muted);">— share your meal plan across devices via JSONBin (free)</span>
-        <a href="https://jsonbin.io" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-dark);text-decoration:none;margin-left:auto;">Get a free key ↗</a>
+        <span style="font-size:0.75rem;color:var(--text-muted);">— share your meal plan across devices, no account needed</span>
       </div>
       <div class="settings-row">
         <div class="form-group" style="flex:2;min-width:240px;">
-          <label>JSONBin Bin ID <span style="font-weight:400;color:var(--text-muted);">(shared with partner)</span></label>
-          <input type="text" id="settings-jsonbin-id" placeholder="64abc123..." />
-        </div>
-        <div class="form-group" style="flex:2;min-width:240px;">
-          <label>JSONBin Master Key <span style="font-weight:400;color:var(--text-muted);">(your own, private)</span></label>
-          <input type="password" id="settings-jsonbin-key" placeholder="$2a$10$..." />
+          <label>Sync ID <span style="font-weight:400;color:var(--text-muted);">(share this with your partner)</span></label>
+          <input type="text" id="settings-jsonbin-id" placeholder="Create a new bin to get an ID…" />
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-          <button class="btn btn-secondary btn-sm" onclick="createNewBin()" title="Create a new JSONBin and auto-fill the Bin ID">+ New bin</button>
+          <button class="btn btn-secondary btn-sm" onclick="createNewBin()" title="Create a new sync bin and auto-fill the ID">+ New bin</button>
         </div>
       </div>
       <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-        Both you and your partner need the same <strong>Bin ID</strong> and your <em>own</em> JSONBin Master Key.
+        Click <strong>+ New bin</strong> to create a shared storage bin. Share the Sync ID with your partner — they paste it in their Settings and save.
         Changes auto-sync within ~3 seconds. Your API keys are never synced.
       </p>
     </div>
@@ -1358,7 +1353,6 @@ let state = {
   apiPromptShown: false,
   // Sync
   jsonbinId: '',
-  jsonbinKey: '',
   lastSyncedAt: 0,
 };
 
@@ -1376,7 +1370,7 @@ function init() {
   initIngBuilder('slot-ing-rows');
   // Start sync
   syncSetup();
-  if (state.jsonbinId && state.jsonbinKey) pullFromCloud();
+  if (state.jsonbinId) pullFromCloud();
 }
 
 function loadFromStorage() {
@@ -1392,7 +1386,6 @@ function loadFromStorage() {
     state.edamamKey = saved.edamamKey || '';
     state.apiPromptShown = saved.apiPromptShown || false;
     state.jsonbinId = saved.jsonbinId || '';
-    state.jsonbinKey = saved.jsonbinKey || '';
     state.lastSyncedAt = saved.lastSyncedAt || 0;
   } catch(e) {}
 
@@ -1401,7 +1394,6 @@ function loadFromStorage() {
   document.getElementById('settings-edamam-id').value = state.edamamId;
   document.getElementById('settings-edamam-key').value = state.edamamKey;
   document.getElementById('settings-jsonbin-id').value = state.jsonbinId;
-  document.getElementById('settings-jsonbin-key').value = state.jsonbinKey;
 }
 
 function saveToStorage() {
@@ -1416,7 +1408,6 @@ function saveToStorage() {
     edamamKey: state.edamamKey,
     apiPromptShown: state.apiPromptShown,
     jsonbinId: state.jsonbinId,
-    jsonbinKey: state.jsonbinKey,
     lastSyncedAt: state.lastSyncedAt,
   }));
   // Trigger debounced cloud push if sync is configured
@@ -1464,23 +1455,21 @@ function saveSettings() {
   state.apiKey = document.getElementById('settings-api-key').value.trim();
   state.edamamId = document.getElementById('settings-edamam-id').value.trim();
   state.edamamKey = document.getElementById('settings-edamam-key').value.trim();
-  const newBinId  = document.getElementById('settings-jsonbin-id').value.trim();
-  const newBinKey = document.getElementById('settings-jsonbin-key').value.trim();
-  const syncChanged = newBinId !== state.jsonbinId || newBinKey !== state.jsonbinKey;
-  state.jsonbinId  = newBinId;
-  state.jsonbinKey = newBinKey;
-  // Save directly (not via saveToStorage to avoid spurious push before keys are set)
+  const newBinId = document.getElementById('settings-jsonbin-id').value.trim();
+  const syncChanged = newBinId !== state.jsonbinId;
+  state.jsonbinId = newBinId;
+  // Save directly (not via saveToStorage to avoid spurious push before ID is set)
   localStorage.setItem('mealplanner', JSON.stringify({
     plan: state.plan, favorites: state.favorites, history: state.history,
     customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
     apiKey: state.apiKey, edamamId: state.edamamId, edamamKey: state.edamamKey,
     apiPromptShown: state.apiPromptShown,
-    jsonbinId: state.jsonbinId, jsonbinKey: state.jsonbinKey, lastSyncedAt: state.lastSyncedAt,
+    jsonbinId: state.jsonbinId, lastSyncedAt: state.lastSyncedAt,
   }));
   toast('Settings saved!', 'success');
   toggleSettings();
-  if (syncChanged && state.jsonbinId && state.jsonbinKey) {
-    syncSetup(); // restart sync with new credentials
+  if (syncChanged && state.jsonbinId) {
+    syncSetup(); // restart sync
     pullFromCloud();
   }
 }
@@ -2805,10 +2794,10 @@ function toast(msg, type = '') {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  CLOUD SYNC (JSONBin)
+//  CLOUD SYNC (npoint.io — no account needed)
 // ══════════════════════════════════════════════════════════════════════
 
-const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+const NPOINT_BASE = 'https://api.npoint.io';
 let _pushTimer = null;
 let _pollTimer = null;
 
@@ -2843,15 +2832,12 @@ function relativeTime(ts) {
 }
 
 async function pushToCloud() {
-  if (!state.jsonbinId || !state.jsonbinKey) return;
+  if (!state.jsonbinId) return;
   setSyncStatus('syncing', 'Syncing…');
   try {
-    const res = await fetch(`${JSONBIN_BASE}/${state.jsonbinId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': state.jsonbinKey,
-      },
+    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(getSharedData()),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2867,14 +2853,11 @@ async function pushToCloud() {
 }
 
 async function pullFromCloud() {
-  if (!state.jsonbinId || !state.jsonbinKey) return;
+  if (!state.jsonbinId) return;
   try {
-    const res = await fetch(`${JSONBIN_BASE}/${state.jsonbinId}/latest`, {
-      headers: { 'X-Master-Key': state.jsonbinKey },
-    });
+    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const remote = data.record;
+    const remote = await res.json();
     if (!remote) return;
 
     // Only apply if remote is newer than last sync
@@ -2915,7 +2898,7 @@ async function pullFromCloud() {
 
 // Debounced push — called by saveToStorage
 function schedulePush() {
-  if (!state.jsonbinId || !state.jsonbinKey) return;
+  if (!state.jsonbinId) return;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(pushToCloud, 3000);
   setSyncStatus('syncing', 'Pending…');
@@ -2925,7 +2908,7 @@ function syncSetup() {
   // Clear any existing poll timer
   if (_pollTimer) clearInterval(_pollTimer);
 
-  if (!state.jsonbinId || !state.jsonbinKey) {
+  if (!state.jsonbinId) {
     setSyncStatus('', 'Not configured');
     return;
   }
@@ -2940,33 +2923,23 @@ function syncSetup() {
 }
 
 async function createNewBin() {
-  const key = document.getElementById('settings-jsonbin-key').value.trim();
-  if (!key) {
-    toast('Enter your JSONBin Master Key first', 'error');
-    return;
-  }
   const btn = event.target;
   btn.disabled = true;
   btn.textContent = 'Creating…';
   try {
-    const res = await fetch(JSONBIN_BASE, {
+    const res = await fetch(`${NPOINT_BASE}/bins`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': key,
-        'X-Bin-Name': 'Meal Planner',
-        'X-Bin-Private': 'true',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(getSharedData()),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} — check your Master Key`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const binId = data.metadata?.id;
+    const binId = data.token;
     if (!binId) throw new Error('No bin ID returned');
     document.getElementById('settings-jsonbin-id').value = binId;
-    toast(`✅ Bin created! ID: ${binId}`, 'success');
+    toast(`✅ Bin created! Share this ID with your partner: ${binId}`, 'success');
   } catch(e) {
-    toast(`Failed: ${e.message}`, 'error');
+    toast(`Failed to create bin: ${e.message}`, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '+ New bin';
