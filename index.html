@@ -2224,13 +2224,14 @@ function copyGroceryList() {
 
 async function findGroceriesProject(token) {
   const proxy = 'https://corsproxy.io/?url=';
-  const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/rest/v2/projects'), {
+  const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/api/v1/projects'), {
     headers: { 'Authorization': `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Todoist auth failed (HTTP ${res.status}) — check your API token`);
-  const projects = await res.json();
+  const data = await res.json();
+  const projects = Array.isArray(data) ? data : (data.results || data.items || []);
   // Look for a project with "grocer" in the name (case-insensitive)
-  const match = projects.find(p => p.name.toLowerCase().includes('grocer'));
+  const match = projects.find(p => p.name && p.name.toLowerCase().includes('grocer'));
   return match ? match.id : null;
 }
 
@@ -2289,7 +2290,7 @@ async function exportToTodoist() {
       const body = { content: item };
       if (projectId) body.project_id = projectId;
       const proxy = 'https://corsproxy.io/?url=';
-      const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/rest/v2/tasks'), {
+      const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/api/v1/tasks'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${state.todoistKey}`,
