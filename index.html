@@ -668,6 +668,27 @@
   .recipe-tab:hover { color: var(--text); }
   .recipe-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: 600; }
 
+  .week-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .week-tab {
+    padding: 8px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+  .week-tab:hover { color: var(--text); }
+  .week-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); font-weight: 700; }
+
   .recipe-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1181,6 +1202,12 @@
         </div>
       </div>
 
+      <!-- WEEK TABS -->
+      <div class="week-tabs">
+        <button id="week-tab-0" class="week-tab active" onclick="switchWeek(0)">This Week</button>
+        <button id="week-tab-1" class="week-tab" onclick="switchWeek(1)">Next Week</button>
+      </div>
+
       <!-- WEEK GRID -->
       <div class="week-grid" id="week-grid"></div>
 
@@ -1439,7 +1466,9 @@ const GROCERY_CATEGORIES = {
 };
 
 let state = {
-  plan: {}, // { 'Monday-breakfast': { name, ingredients, time, url, source, image } }
+  plans: { 0: {}, 1: {} }, // 0 = this week, 1 = next week
+  plan: {},  // pointer to plans[weekOffset] — set in loadFromStorage
+  weekOffset: 0, // 0 = this week, 1 = next week
   favorites: [],
   history: [],
   customRecipes: [],
@@ -1480,7 +1509,13 @@ function init() {
 function loadFromStorage() {
   try {
     const saved = JSON.parse(localStorage.getItem('mealplanner') || '{}');
-    state.plan = saved.plan || {};
+    // Multi-week support: migrate old single-plan format if needed
+    if (saved.plans) {
+      state.plans = saved.plans;
+    } else {
+      state.plans = { 0: saved.plan || {}, 1: {} };
+    }
+    state.plan = state.plans[0]; // always start on this week
     state.favorites = saved.favorites || [];
     state.history = saved.history || [];
     state.customRecipes = saved.customRecipes || [];
@@ -1504,7 +1539,7 @@ function loadFromStorage() {
 
 function saveToStorage() {
   localStorage.setItem('mealplanner', JSON.stringify({
-    plan: state.plan,
+    plans: state.plans,
     favorites: state.favorites,
     history: state.history,
     customRecipes: state.customRecipes,
@@ -1553,6 +1588,18 @@ function switchRecipeTab(tab) {
   if (tab === 'mine') { renderCustomRecipes(); initPhotoImport(); }
 }
 
+function switchWeek(offset) {
+  state.weekOffset = offset;
+  state.plan = state.plans[offset];
+  [0, 1].forEach(i => {
+    document.getElementById('week-tab-' + i).classList.toggle('active', i === offset);
+  });
+  document.getElementById('week-title').textContent = offset === 0 ? 'This Week' : 'Next Week';
+  updateWeekTitle();
+  renderWeekGrid();
+  renderGroceryList();
+}
+
 function toggleSettings() {
   const bar = document.getElementById('settings-bar');
   bar.classList.toggle('open');
@@ -1568,7 +1615,7 @@ function saveSettings() {
   state.jsonbinId = newBinId;
   // Save directly (not via saveToStorage to avoid spurious push before ID is set)
   localStorage.setItem('mealplanner', JSON.stringify({
-    plan: state.plan, favorites: state.favorites, history: state.history,
+    plans: state.plans, favorites: state.favorites, history: state.history,
     customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
     apiKey: state.apiKey, edamamId: state.edamamId, edamamKey: state.edamamKey,
     apiPromptShown: state.apiPromptShown,
@@ -1591,6 +1638,7 @@ function saveSettings() {
 function updateWeekTitle() {
   const now = new Date();
   const mon = getMonday(now);
+  mon.setDate(mon.getDate() + state.weekOffset * 7);
   const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
   const opts = { month: 'short', day: 'numeric' };
   document.getElementById('week-subtitle').textContent =
@@ -1612,8 +1660,9 @@ function getTodayDayIndex() {
 
 function renderWeekGrid() {
   const grid = document.getElementById('week-grid');
-  const todayIdx = getTodayDayIndex();
+  const todayIdx = state.weekOffset === 0 ? getTodayDayIndex() : -1; // no "today" highlight on next week
   const mon = getMonday(new Date());
+  mon.setDate(mon.getDate() + state.weekOffset * 7); // offset to correct week
 
   let html = '';
 
@@ -1685,8 +1734,10 @@ function changeServings(key, delta) {
 }
 
 function clearWeek() {
-  if (!confirm('Clear all meals from this week?')) return;
-  state.plan = {};
+  const label = state.weekOffset === 0 ? 'this week' : 'next week';
+  if (!confirm(`Clear all meals from ${label}?`)) return;
+  state.plans[state.weekOffset] = {};
+  state.plan = state.plans[state.weekOffset];
   state.groceryChecked = {};
   saveToStorage();
   renderWeekGrid();
@@ -1699,6 +1750,7 @@ function saveWeekToHistory() {
   if (!hasMeals) { toast('No meals to save', 'error'); return; }
 
   const mon = getMonday(new Date());
+  mon.setDate(mon.getDate() + state.weekOffset * 7);
   const weekLabel = mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const entry = { weekOf: weekLabel, plan: JSON.parse(JSON.stringify(state.plan)), savedAt: Date.now() };
 
@@ -1904,8 +1956,9 @@ Requirements:
     if (!jsonMatch) throw new Error('Invalid response from AI');
     const week = JSON.parse(jsonMatch[0]);
 
-    // Populate plan
-    state.plan = {};
+    // Populate plan (active week only)
+    state.plans[state.weekOffset] = {};
+    state.plan = state.plans[state.weekOffset];
     DAYS.forEach(day => {
       if (week[day]) {
         MEALS.forEach(meal => {
@@ -3157,8 +3210,10 @@ function renderHistory() {
 }
 
 function loadHistoryWeek(index) {
-  if (!confirm('This will replace your current week. Continue?')) return;
-  state.plan = JSON.parse(JSON.stringify(state.history[index].plan));
+  const label = state.weekOffset === 0 ? 'this week' : 'next week';
+  if (!confirm(`This will replace ${label}. Continue?`)) return;
+  state.plans[state.weekOffset] = JSON.parse(JSON.stringify(state.history[index].plan));
+  state.plan = state.plans[state.weekOffset];
   state.groceryChecked = {};
   saveToStorage();
   switchView('week');
@@ -3235,7 +3290,7 @@ let _pollTimer = null;
 // Fields that sync to the cloud (API keys stay local)
 function getSharedData() {
   return {
-    plan: state.plan,
+    plans: state.plans,
     favorites: state.favorites,
     history: state.history,
     customRecipes: state.customRecipes,
@@ -3298,8 +3353,13 @@ async function pullFromCloud() {
       return;
     }
 
-    // Apply remote data
-    state.plan          = remote.plan          || state.plan;
+    // Apply remote data — handle both new (plans) and old (plan) format
+    if (remote.plans) {
+      state.plans = remote.plans;
+    } else if (remote.plan) {
+      state.plans = { 0: remote.plan, 1: state.plans[1] || {} };
+    }
+    state.plan          = state.plans[state.weekOffset];
     state.favorites     = remote.favorites     || state.favorites;
     state.history       = remote.history       || state.history;
     state.customRecipes = remote.customRecipes || state.customRecipes;
@@ -3309,7 +3369,7 @@ async function pullFromCloud() {
     // Persist locally (direct, not via saveToStorage to avoid push loop)
     const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
     Object.assign(raw, {
-      plan: state.plan, favorites: state.favorites, history: state.history,
+      plans: state.plans, favorites: state.favorites, history: state.history,
       customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
       lastSyncedAt: state.lastSyncedAt,
     });
