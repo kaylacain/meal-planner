@@ -1142,6 +1142,163 @@
   }
 
   /* ── INGREDIENT CHECKLIST MODAL ── */
+  /* ── RECIPE DETAIL MODAL ── */
+  .recipe-detail-modal {
+    max-width: 680px;
+  }
+
+  .recipe-detail-hero {
+    background: var(--surface2);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .recipe-detail-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .recipe-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .recipe-detail-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 3px 10px;
+  }
+
+  .recipe-detail-chip.accent {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
+  .recipe-detail-body {
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+  }
+
+  @media (max-width: 540px) {
+    .recipe-detail-body {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+
+  .recipe-detail-section-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .recipe-detail-ingredients {
+    list-style: none;
+  }
+
+  .recipe-detail-ingredients li {
+    font-size: 0.875rem;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .recipe-detail-ingredients li:last-child {
+    border-bottom: none;
+  }
+
+  .recipe-detail-instructions {
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .recipe-detail-instructions.numbered ol {
+    padding-left: 20px;
+  }
+
+  .recipe-detail-instructions.numbered li {
+    margin-bottom: 10px;
+  }
+
+  .recipe-detail-footer {
+    padding: 14px 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--surface);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .recipe-detail-servings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .recipe-detail-servings button {
+    width: 26px; height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+
+  .recipe-detail-servings button:hover { background: var(--border); }
+
+  .recipe-detail-servings strong {
+    font-size: 1rem;
+    color: var(--text);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* Make meal name clickable */
+  .meal-name-clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 0.15s, color 0.15s;
+  }
+
+  .meal-slot:hover .meal-name-clickable {
+    text-decoration-color: rgba(0,0,0,0.25);
+  }
+
+  .meal-name-clickable:hover {
+    color: var(--accent-dark) !important;
+    text-decoration-color: var(--accent) !important;
+  }
+
   .ing-check-list {
     display: flex;
     flex-direction: column;
@@ -1410,8 +1567,8 @@
       </div>
 
       <!-- Manual Recipe Form -->
-      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
-        <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:16px;">✏️ Create a Recipe</h3>
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);" id="recipe-form-card">
+        <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:16px;" id="recipe-form-title">✏️ Create a Recipe</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group" style="grid-column:1/-1;">
             <label>Recipe Name *</label>
@@ -1422,11 +1579,17 @@
             <input type="text" id="new-recipe-time" placeholder="e.g. 30 min" />
           </div>
           <div class="form-group">
+            <label>Default Servings
+              <span style="font-weight:400;color:var(--text-muted);font-size:0.78rem;display:block;margin-top:1px;">Ingredients are stored per 1 serving</span>
+            </label>
+            <input type="number" id="new-recipe-servings" placeholder="e.g. 4" min="1" max="99" style="width:100px;" />
+          </div>
+          <div class="form-group">
             <label>Source URL (optional)</label>
             <input type="url" id="new-recipe-url" placeholder="https://…" />
           </div>
           <div class="form-group" style="grid-column:1/-1;">
-            <label>Ingredients <span style="font-weight:400;color:var(--text-muted);">(per 1 serving)</span></label>
+            <label>Ingredients <span style="font-weight:400;color:var(--text-muted);">(per 1 serving — scaled automatically)</span></label>
             <div class="ing-builder" id="new-recipe-ing-builder">
               <div class="ing-builder-header">
                 <span>Qty</span><span>Unit</span><span>Ingredient</span><span></span>
@@ -1439,10 +1602,13 @@
           </div>
           <div class="form-group" style="grid-column:1/-1;">
             <label>Notes / Instructions (optional)</label>
-            <textarea id="new-recipe-notes" rows="3" placeholder="Any notes about preparation…"></textarea>
+            <textarea id="new-recipe-notes" rows="5" placeholder="Any notes about preparation…"></textarea>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="saveCustomRecipe()">💾 Save Recipe</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+          <button class="btn btn-primary" id="recipe-save-btn" onclick="saveCustomRecipe()">💾 Save Recipe</button>
+          <button class="btn btn-secondary" id="recipe-cancel-edit-btn" onclick="cancelEditRecipe()" style="display:none;">Cancel</button>
+        </div>
       </div>
 
       <!-- Saved Custom Recipes -->
@@ -1559,6 +1725,33 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeAddPlanModal(null, true)">Cancel</button>
       <button class="btn btn-primary" onclick="confirmAddToPlan()">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recipe Detail Modal -->
+<div id="recipe-detail-overlay" class="overlay" onclick="closeRecipeDetail(event)">
+  <div class="modal recipe-detail-modal">
+    <div class="modal-header" style="padding:16px 20px 14px;">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;" id="recipe-detail-slot-label"></div>
+      <button class="close-btn" onclick="closeRecipeDetail(null,true)">✕</button>
+    </div>
+    <div class="recipe-detail-hero">
+      <div class="recipe-detail-title" id="recipe-detail-title"></div>
+      <div class="recipe-detail-meta" id="recipe-detail-meta"></div>
+    </div>
+    <div class="recipe-detail-body" id="recipe-detail-body">
+      <!-- filled by JS -->
+    </div>
+    <div class="recipe-detail-footer">
+      <div class="recipe-detail-servings">
+        <span>Servings:</span>
+        <button onclick="recipeDetailChangeServings(-1)">−</button>
+        <strong id="recipe-detail-servings-count">1</strong>
+        <button onclick="recipeDetailChangeServings(1)">+</button>
+      </div>
+      <a id="recipe-detail-url-btn" class="btn btn-secondary btn-sm" target="_blank" rel="noopener" style="display:none;">🔗 View original</a>
+      <button class="btn btn-secondary btn-sm" onclick="openSlotModalFromDetail()">✏️ Edit slot</button>
     </div>
   </div>
 </div>
@@ -1831,7 +2024,7 @@ function renderWeekGrid() {
         const servings = slot.servings || 1;
         html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}">
           <div class="meal-card-mini">
-            <div class="meal-name">${escHtml(slot.name)}</div>
+            <div class="meal-name meal-name-clickable" onclick="openRecipeDetail('${key}')" title="View recipe">${escHtml(slot.name)}</div>
             ${slot.source === 'ai' ? '<div class="ai-generated-badge">✨ AI</div>' : ''}
             <div class="servings-control">
               <button onclick="changeServings('${key}', -1)" title="Fewer servings">−</button>
@@ -1840,6 +2033,7 @@ function renderWeekGrid() {
               <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
             </div>
             <div class="meal-actions">
+              <button onclick="openRecipeDetail('${key}')" title="View recipe">👁</button>
               <button onclick="openSlotModal('${day}','${meal}')" title="Change">✏️</button>
               <button onclick="removeMeal('${key}')" title="Remove">✕</button>
               ${!isFavorite(slot.name) ? `<button onclick="saveFavoriteFromSlot('${key}')" title="Save">⭐</button>` : ''}
@@ -2053,6 +2247,10 @@ function _doAssignMealToSlot(recipe, checkedIngredients) {
   const key = `${state.currentSlot.day}-${state.currentSlot.meal}`;
   // Store meal with only the checked ingredients for grocery purposes
   const mealToStore = { ...recipe };
+  // Default servings to defaultServings if set and not already overridden
+  if (!mealToStore.servings && mealToStore.defaultServings) {
+    mealToStore.servings = mealToStore.defaultServings;
+  }
   if (checkedIngredients !== null) {
     mealToStore._groceryIngredients = checkedIngredients;
   }
@@ -2148,6 +2346,151 @@ function confirmIngCheck() {
     // plan source — close the add-plan modal too
     _doConfirmAddToPlan(recipe, checkedIngredients);
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RECIPE DETAIL MODAL
+// ══════════════════════════════════════════════════════════════════════
+
+let _recipeDetailKey = null;
+
+function openRecipeDetail(key) {
+  const slot = state.plan[key];
+  if (!slot) return;
+  _recipeDetailKey = key;
+
+  // Parse day/meal from key e.g. "Monday-dinner"
+  const dashIdx = key.indexOf('-');
+  const day = key.slice(0, dashIdx);
+  const meal = key.slice(dashIdx + 1);
+  const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1);
+
+  // Slot label in header
+  document.getElementById('recipe-detail-slot-label').textContent =
+    `${MEAL_EMOJIS[meal]}  ${day} · ${mealLabel}`;
+
+  // Title
+  document.getElementById('recipe-detail-title').textContent = slot.name;
+
+  // Meta chips
+  const meta = document.getElementById('recipe-detail-meta');
+  let metaHtml = '';
+  if (slot.time) metaHtml += `<span class="recipe-detail-chip">⏱ ${escHtml(slot.time)}</span>`;
+  const servings = slot.servings || 1;
+  metaHtml += `<span class="recipe-detail-chip accent" id="recipe-detail-servings-chip">👤 ${servings} serving${servings !== 1 ? 's' : ''}</span>`;
+  if (slot.defaultServings && slot.defaultServings > 1) {
+    metaHtml += `<span class="recipe-detail-chip" title="Original recipe yield">📋 Makes ${slot.defaultServings}</span>`;
+  }
+  if (slot.source === 'ai') metaHtml += `<span class="recipe-detail-chip">✨ AI generated</span>`;
+  if (slot.calories) metaHtml += `<span class="recipe-detail-chip">🔥 ${escHtml(slot.calories)} cal</span>`;
+  meta.innerHTML = metaHtml;
+
+  // Servings counter in footer
+  document.getElementById('recipe-detail-servings-count').textContent = servings;
+
+  // URL button
+  const urlBtn = document.getElementById('recipe-detail-url-btn');
+  if (slot.url) {
+    urlBtn.href = slot.url;
+    urlBtn.style.display = '';
+  } else {
+    urlBtn.style.display = 'none';
+  }
+
+  // Body: ingredients + instructions
+  _renderRecipeDetailBody(slot, servings);
+
+  document.getElementById('recipe-detail-overlay').classList.add('open');
+}
+
+function _renderRecipeDetailBody(slot, servings) {
+  const body = document.getElementById('recipe-detail-body');
+  const ings = slot.ingredients || [];
+  const notes = slot.notes || '';
+
+  // Left column: ingredients
+  const perServingNote = slot.defaultServings && slot.defaultServings > 1
+    ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;">Per serving × ${servings} (recipe makes ${slot.defaultServings})</div>`
+    : (servings !== 1 ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;">Scaled to ${servings} serving${servings !== 1 ? 's' : ''}</div>` : '');
+  let ingsHtml = `<div>
+    <div class="recipe-detail-section-label">Ingredients</div>
+    ${perServingNote}`;
+
+  if (ings.length === 0) {
+    ingsHtml += `<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">No ingredients listed.</p>`;
+  } else {
+    ingsHtml += `<ul class="recipe-detail-ingredients">`;
+    ings.forEach(ing => {
+      const scaled = servings !== 1 ? scaleIngredient(ing.trim(), servings) : ing.trim();
+      ingsHtml += `<li>${escHtml(scaled)}</li>`;
+    });
+    ingsHtml += `</ul>`;
+  }
+  ingsHtml += `</div>`;
+
+  // Right column: instructions
+  let notesHtml = `<div>
+    <div class="recipe-detail-section-label">Instructions</div>`;
+
+  if (!notes) {
+    notesHtml += `<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">No instructions saved. ${slot.url ? 'See the original recipe link below.' : 'Import a recipe via URL to get full instructions.'}</p>`;
+  } else {
+    // Detect numbered steps: lines starting with "1." or "Step 1"
+    const lines = notes.trim().split(/\n+/);
+    const isNumbered = lines.some(l => /^\d+[\.\)]/.test(l.trim()) || /^step\s+\d+/i.test(l.trim()));
+
+    if (isNumbered) {
+      // Render as ordered list
+      const steps = lines.filter(l => l.trim());
+      notesHtml += `<ol style="padding-left:20px;margin:0;">`;
+      steps.forEach(step => {
+        // Strip leading "1." or "Step 1:" prefix for the <li> content
+        const cleaned = step.trim().replace(/^(\d+[\.\)]\s*|step\s+\d+[:\.\)]\s*)/i, '');
+        notesHtml += `<li style="font-size:0.875rem;line-height:1.7;margin-bottom:10px;color:var(--text);">${escHtml(cleaned)}</li>`;
+      });
+      notesHtml += `</ol>`;
+    } else {
+      // Plain paragraph / preserve whitespace
+      notesHtml += `<div class="recipe-detail-instructions">${escHtml(notes)}</div>`;
+    }
+  }
+  notesHtml += `</div>`;
+
+  body.innerHTML = ingsHtml + notesHtml;
+}
+
+function recipeDetailChangeServings(delta) {
+  if (!_recipeDetailKey || !state.plan[_recipeDetailKey]) return;
+  const current = state.plan[_recipeDetailKey].servings || 1;
+  const next = Math.max(1, current + delta);
+  state.plan[_recipeDetailKey].servings = next;
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+
+  // Update the modal UI without closing it
+  const slot = state.plan[_recipeDetailKey];
+  document.getElementById('recipe-detail-servings-count').textContent = next;
+  const chip = document.getElementById('recipe-detail-servings-chip');
+  if (chip) chip.textContent = `👤 ${next} serving${next !== 1 ? 's' : ''}`;
+  _renderRecipeDetailBody(slot, next);
+}
+
+function closeRecipeDetail(e, force) {
+  if (force || (e && e.target === document.getElementById('recipe-detail-overlay'))) {
+    document.getElementById('recipe-detail-overlay').classList.remove('open');
+    _recipeDetailKey = null;
+  }
+}
+
+function openSlotModalFromDetail() {
+  const key = _recipeDetailKey;
+  closeRecipeDetail(null, true);
+  if (!key) return;
+  const dashIdx = key.indexOf('-');
+  const day = key.slice(0, dashIdx);
+  const meal = key.slice(dashIdx + 1);
+  openSlotModal(day, meal);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2317,6 +2660,13 @@ function scaleIngredient(ingredient, multiplier) {
   }
 
   return `${formatted} ${scaledRest}`.trim();
+}
+
+// Divide a list of ingredient strings by servings to get per-1-serving amounts
+// Returns the divided list (strings unchanged if qty can't be parsed)
+function normalizeIngredientsToOneServing(ingredients, servings) {
+  if (!servings || servings <= 1) return ingredients;
+  return ingredients.map(ing => scaleIngredient(ing, 1 / servings));
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2931,6 +3281,10 @@ function _doConfirmAddToPlan(recipe, checkedIngredients) {
   const day = DAYS[dayIdx];
   const key = `${day}-${meal}`;
   const mealToStore = { ...recipe };
+  // Default servings to defaultServings if set
+  if (!mealToStore.servings && mealToStore.defaultServings) {
+    mealToStore.servings = mealToStore.defaultServings;
+  }
   if (checkedIngredients !== null) {
     mealToStore._groceryIngredients = checkedIngredients;
   }
@@ -3125,29 +3479,100 @@ function collectIngRows(containerId) {
 //  CUSTOM RECIPES & URL IMPORT
 // ══════════════════════════════════════════════════════════════════════
 
+let _editingRecipeId = null; // null = create mode, number = edit mode
+
 function saveCustomRecipe() {
   const name = document.getElementById('new-recipe-name').value.trim();
   if (!name) { toast('Recipe name is required', 'error'); return; }
   const ingredients = collectIngRows('new-recipe-ing-rows');
-  const recipe = {
-    id: Date.now(),
-    name,
-    time: document.getElementById('new-recipe-time').value.trim(),
-    url: document.getElementById('new-recipe-url').value.trim(),
-    notes: document.getElementById('new-recipe-notes').value.trim(),
-    ingredients,
-    source: 'custom',
-    image: null,
-    createdAt: Date.now(),
-  };
-  state.customRecipes.unshift(recipe);
+  const servingsRaw = parseInt(document.getElementById('new-recipe-servings').value) || 1;
+  const defaultServings = Math.max(1, servingsRaw);
+
+  if (_editingRecipeId !== null) {
+    // Update existing recipe
+    const idx = state.customRecipes.findIndex(r => r.id === _editingRecipeId);
+    if (idx !== -1) {
+      state.customRecipes[idx] = {
+        ...state.customRecipes[idx],
+        name,
+        time: document.getElementById('new-recipe-time').value.trim(),
+        url: document.getElementById('new-recipe-url').value.trim(),
+        notes: document.getElementById('new-recipe-notes').value.trim(),
+        ingredients,
+        defaultServings,
+        updatedAt: Date.now(),
+      };
+      // Also update any plan slots that reference this recipe by name
+      Object.keys(state.plans).forEach(weekKey => {
+        Object.keys(state.plans[weekKey]).forEach(slotKey => {
+          const slot = state.plans[weekKey][slotKey];
+          if (slot && slot.id === _editingRecipeId) {
+            state.plans[weekKey][slotKey] = { ...state.plans[weekKey][slotKey], ...state.customRecipes[idx] };
+          }
+        });
+      });
+      state.plan = state.plans[state.weekOffset];
+    }
+    _editingRecipeId = null;
+    toast('Recipe updated!', 'success');
+  } else {
+    // Create new recipe
+    const recipe = {
+      id: Date.now(),
+      name,
+      time: document.getElementById('new-recipe-time').value.trim(),
+      url: document.getElementById('new-recipe-url').value.trim(),
+      notes: document.getElementById('new-recipe-notes').value.trim(),
+      ingredients,
+      defaultServings,
+      source: 'custom',
+      image: null,
+      createdAt: Date.now(),
+    };
+    state.customRecipes.unshift(recipe);
+    toast('Recipe saved!', 'success');
+  }
+
   saveToStorage();
   renderCustomRecipes();
-  // Clear form
+  renderWeekGrid();
+  _resetRecipeForm();
+}
+
+function _resetRecipeForm() {
   ['new-recipe-name','new-recipe-time','new-recipe-url','new-recipe-notes']
     .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('new-recipe-servings').value = '';
   initIngBuilder('new-recipe-ing-rows');
-  toast('Recipe saved!', 'success');
+  document.getElementById('recipe-form-title').textContent = '✏️ Create a Recipe';
+  document.getElementById('recipe-save-btn').textContent = '💾 Save Recipe';
+  document.getElementById('recipe-cancel-edit-btn').style.display = 'none';
+  _editingRecipeId = null;
+}
+
+function editCustomRecipe(id) {
+  const recipe = state.customRecipes.find(r => r.id === id);
+  if (!recipe) return;
+  _editingRecipeId = id;
+
+  document.getElementById('new-recipe-name').value = recipe.name || '';
+  document.getElementById('new-recipe-time').value = recipe.time || '';
+  document.getElementById('new-recipe-url').value = recipe.url || '';
+  document.getElementById('new-recipe-notes').value = recipe.notes || '';
+  document.getElementById('new-recipe-servings').value = recipe.defaultServings || 1;
+  initIngBuilder('new-recipe-ing-rows');
+  populateIngBuilder('new-recipe-ing-rows', recipe.ingredients || []);
+
+  document.getElementById('recipe-form-title').textContent = '✏️ Edit Recipe';
+  document.getElementById('recipe-save-btn').textContent = '💾 Update Recipe';
+  document.getElementById('recipe-cancel-edit-btn').style.display = '';
+
+  // Scroll to form
+  document.getElementById('recipe-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelEditRecipe() {
+  _resetRecipeForm();
 }
 
 function deleteCustomRecipe(id) {
@@ -3171,14 +3596,17 @@ function renderCustomRecipes() {
     const imgHtml = `<div class="recipe-img">📝</div>`;
     let footerBtns = `<button class="btn btn-secondary btn-sm" onclick="openAddPlanModal(window['${storeKey}'])">📅 Add to plan</button>`;
     footerBtns += ` <button class="btn btn-secondary btn-sm" onclick="toggleFavorite(window['${storeKey}'], this)">${isFav ? '⭐ Saved' : '☆ Save'}</button>`;
+    footerBtns += ` <button class="btn btn-ghost btn-sm" onclick="editCustomRecipe(${r.id})">✏️ Edit</button>`;
     if (r.url) footerBtns += ` <a href="${escAttr(r.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 View</a>`;
     footerBtns += ` <button class="btn btn-danger btn-sm" onclick="deleteCustomRecipe(${r.id})">🗑</button>`;
+    const servingsLabel = r.defaultServings && r.defaultServings > 1 ? `<span>👤 Makes ${r.defaultServings}</span>` : '';
     return `<div class="recipe-card">
       ${imgHtml}
       <div class="recipe-body">
         <div class="recipe-title">${escHtml(r.name)}</div>
         <div class="recipe-meta">
           ${r.time ? `<span>⏱ ${escHtml(r.time)}</span>` : ''}
+          ${servingsLabel}
           <span class="badge badge-green">Custom</span>
         </div>
         <div class="recipe-ingredients">
@@ -3317,10 +3745,11 @@ async function parsePhotosWithClaude() {
 {
   "name": "Recipe name",
   "time": "total prep + cook time",
+  "servings": 4,
   "ingredients": ["1 cup flour", "2 eggs", ...],
-  "notes": "Key instructions summarized in 3-5 sentences"
+  "notes": "Complete step-by-step cooking instructions as written. Include all steps, temperatures, times, and techniques. Do not summarize."
 }
-If multiple pages are shown, combine them into one recipe. List every ingredient you can see.`,
+If multiple pages are shown, combine them into one recipe. List every ingredient you can see exactly as written for the full recipe yield. "servings" should be the integer number of servings the recipe makes (e.g. 4 if it says "serves 4", 1 if unknown).`,
       },
     ];
 
@@ -3351,15 +3780,21 @@ If multiple pages are shown, combine them into one recipe. List every ingredient
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.name) throw new Error('No recipe name found. Try a clearer image.');
 
+    // Normalize ingredients to per-1-serving
+    const defaultServings = Math.max(1, parseInt(parsed.servings) || 1);
+    const normalizedIngredients = normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
+
     // Pre-fill the recipe form (same as importFromUrl)
     document.getElementById('new-recipe-name').value = parsed.name || '';
     document.getElementById('new-recipe-time').value = parsed.time || '';
     document.getElementById('new-recipe-url').value = '';
+    document.getElementById('new-recipe-servings').value = defaultServings > 1 ? defaultServings : '';
     document.getElementById('new-recipe-notes').value = parsed.notes || '';
     initIngBuilder('new-recipe-ing-rows');
-    populateIngBuilder('new-recipe-ing-rows', parsed.ingredients || []);
+    populateIngBuilder('new-recipe-ing-rows', normalizedIngredients);
 
-    if (status) status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe parsed! Review the details below and click Save.</span>`;
+    const servingsNote = defaultServings > 1 ? ` Ingredients divided to 1-serving amounts (recipe makes ${defaultServings}).` : '';
+    if (status) status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe parsed!${servingsNote} Review the details below and click Save.</span>`;
 
     // Clear photos
     _photoFiles = [];
@@ -3412,17 +3847,20 @@ async function importFromUrl() {
 {
   "name": "Recipe name",
   "time": "total cook/prep time",
+  "servings": 4,
   "ingredients": ["1 cup flour", "2 tbsp olive oil", "3 large eggs", ...],
   "notes": "Complete step-by-step cooking instructions, exactly as written on the page. Include all steps, temperatures, times, and techniques. Do not summarize.",
   "url": "${url}"
 }
 
 Rules for ingredients:
+- List ingredients exactly as they appear for the full recipe yield (not per serving)
 - Format each as "qty unit name" e.g. "1 cup flour", "2 tbsp butter", "1/2 tsp salt"
 - Use standard units: tsp, tbsp, cup, oz, lb, g, kg, ml, liter, clove, slice, can, bunch, pinch, piece
 - If there's no unit (e.g. "3 eggs"), write "3 whole eggs"
 - Do NOT include prep notes in the ingredient string (e.g. "chopped", "diced") — just qty, unit, name
 - Do NOT include "of" between unit and ingredient name
+- "servings" must be an integer: the number of servings the full recipe makes (e.g. 4 if it says "serves 4", 1 if unknown)
 
 Webpage text:
 ${snippet}`;
@@ -3435,16 +3873,22 @@ ${snippet}`;
 
     if (!parsed.name) throw new Error('No recipe name found on page.');
 
+    // Normalize ingredients to per-1-serving
+    const defaultServings = Math.max(1, parseInt(parsed.servings) || 1);
+    const normalizedIngredients = normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
+
     // Pre-fill the form
     document.getElementById('new-recipe-name').value = parsed.name || '';
     document.getElementById('new-recipe-time').value = parsed.time || '';
     document.getElementById('new-recipe-url').value = url;
+    document.getElementById('new-recipe-servings').value = defaultServings > 1 ? defaultServings : '';
     initIngBuilder('new-recipe-ing-rows');
-    populateIngBuilder('new-recipe-ing-rows', parsed.ingredients || []);
+    populateIngBuilder('new-recipe-ing-rows', normalizedIngredients);
     document.getElementById('new-recipe-notes').value = parsed.notes || '';
     document.getElementById('url-import-input').value = '';
 
-    status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe imported! Review the details below and click Save.</span>`;
+    const servingsNote = defaultServings > 1 ? ` Ingredients divided to 1-serving amounts (recipe makes ${defaultServings}).` : '';
+    status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe imported!${servingsNote} Review the details below and click Save.</span>`;
 
     // Scroll to form
     document.getElementById('new-recipe-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
