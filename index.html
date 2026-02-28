@@ -246,9 +246,12 @@
 
   .meal-slot {
     min-height: 90px;
-    cursor: pointer;
+    cursor: default;
     transition: background 0.12s;
     position: relative;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
   }
 
   .meal-slot.breakfast { background: var(--breakfast); }
@@ -261,6 +264,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
   }
 
   .meal-slot .add-btn {
@@ -284,9 +288,34 @@
 
   .meal-card-mini {
     padding: 6px;
-    height: 100%;
     display: flex;
     flex-direction: column;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    margin-bottom: 4px;
+  }
+  .meal-card-mini:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  .add-more-btn {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 3px 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    background: rgba(255,255,255,0.6);
+    border: 1px dashed var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .add-more-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-style: solid;
   }
 
   .meal-card-mini .meal-name {
@@ -1400,19 +1429,14 @@
   <div id="settings-bar" class="settings-bar">
     <h3>⚙️ Settings</h3>
 
-    <!-- AI / Recipe API keys -->
+    <!-- API Key for recipe import -->
     <div class="settings-row" style="margin-bottom:12px;">
       <div class="form-group" style="flex:2;min-width:280px;">
-        <label>Anthropic API Key (for AI suggestions)</label>
+        <label>Anthropic API Key <span style="font-weight:400;color:var(--text-muted);">(for URL &amp; photo recipe import)</span></label>
         <input type="password" id="settings-api-key" placeholder="sk-ant-..." />
       </div>
-      <div class="form-group" style="flex:1;min-width:180px;">
-        <label>Edamam App ID (optional)</label>
-        <input type="text" id="settings-edamam-id" placeholder="App ID" />
-      </div>
-      <div class="form-group" style="flex:1;min-width:180px;">
-        <label>Edamam App Key (optional)</label>
-        <input type="text" id="settings-edamam-key" placeholder="App Key" />
+      <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;">
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
       </div>
     </div>
 
@@ -1472,7 +1496,6 @@
         <div class="week-actions">
           <button class="btn btn-ghost btn-sm" onclick="saveWeekToHistory()" title="Save to History">💾 Save</button>
           <button class="btn btn-ghost btn-sm" onclick="clearWeek()" title="Clear this week" style="color:var(--text-muted);">🗑 Clear</button>
-          <button id="auto-suggest-btn" class="btn btn-primary btn-sm" onclick="autoSuggestWeek()">✨ Auto-suggest</button>
         </div>
       </div>
 
@@ -1505,32 +1528,16 @@
       <div>
         <h2 style="font-size:1.4rem;font-weight:700;">Recipes</h2>
       </div>
-      <div class="search-bar">
-        <input type="text" id="recipe-search-input" placeholder="Search recipes (e.g. pasta, chicken stir fry)…"
-          onkeydown="if(event.key==='Enter') searchRecipes()" />
-        <button class="btn btn-primary" onclick="searchRecipes()">Search</button>
-      </div>
     </div>
 
     <div class="recipe-tabs">
-      <button class="recipe-tab active" id="rtab-search" onclick="switchRecipeTab('search')">Search Results</button>
-      <button class="recipe-tab" id="rtab-mine" onclick="switchRecipeTab('mine')">📝 My Recipes</button>
+      <button class="recipe-tab active" id="rtab-mine" onclick="switchRecipeTab('mine')">📝 My Recipes</button>
       <button class="recipe-tab" id="rtab-favorites" onclick="switchRecipeTab('favorites')">⭐ Favorites</button>
       <button class="recipe-tab" id="rtab-history" onclick="switchRecipeTab('history')">📅 History</button>
     </div>
 
-    <div id="rtab-content-search">
-      <div id="search-results" class="recipe-grid">
-        <div class="empty-state" style="grid-column:1/-1">
-          <div class="emoji">🔍</div>
-          <h3>Search for recipes</h3>
-          <p>Type a dish or ingredient above and press Search.</p>
-        </div>
-      </div>
-    </div>
-
     <!-- MY RECIPES TAB -->
-    <div id="rtab-content-mine" style="display:none;">
+    <div id="rtab-content-mine">
 
       <!-- Photo Import -->
       <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
@@ -1682,10 +1689,9 @@
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <input type="text" id="slot-search-input" placeholder="Search recipes…"
+        <input type="text" id="slot-search-input" placeholder="Search saved recipes…"
           onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
         <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
-        <button id="slot-ai-btn" class="btn btn-primary" onclick="slotAISuggest()" title="Requires Anthropic API key">✨ AI</button>
       </div>
       <div id="slot-results"></div>
     </div>
@@ -1743,15 +1749,25 @@
     <div class="recipe-detail-body" id="recipe-detail-body">
       <!-- filled by JS -->
     </div>
-    <div class="recipe-detail-footer">
-      <div class="recipe-detail-servings">
-        <span>Servings:</span>
-        <button onclick="recipeDetailChangeServings(-1)">−</button>
-        <strong id="recipe-detail-servings-count">1</strong>
-        <button onclick="recipeDetailChangeServings(1)">+</button>
+    <div class="recipe-detail-footer" style="flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:16px;flex:1;flex-wrap:wrap;">
+        <div class="recipe-detail-servings" style="flex:none;">
+          <span style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Plan servings</span>
+          <button onclick="recipeDetailChangePlanServings(-1)" title="Fewer servings saved in plan">−</button>
+          <strong id="recipe-detail-servings-count">1</strong>
+          <button onclick="recipeDetailChangePlanServings(1)" title="More servings saved in plan">+</button>
+        </div>
+        <div class="recipe-detail-servings" style="flex:none;border-left:1px solid var(--border);padding-left:16px;">
+          <span style="font-size:0.72rem;font-weight:600;color:var(--accent-dark);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Cooking for</span>
+          <button onclick="recipeDetailChangeCookServings(-1)" title="View ingredients for fewer servings">−</button>
+          <strong id="recipe-detail-cook-count" style="color:var(--accent-dark);">1</strong>
+          <button onclick="recipeDetailChangeCookServings(1)" title="View ingredients for more servings">+</button>
+        </div>
       </div>
-      <a id="recipe-detail-url-btn" class="btn btn-secondary btn-sm" target="_blank" rel="noopener" style="display:none;">🔗 View original</a>
-      <button class="btn btn-secondary btn-sm" onclick="openSlotModalFromDetail()">✏️ Edit slot</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <a id="recipe-detail-url-btn" class="btn btn-secondary btn-sm" target="_blank" rel="noopener" style="display:none;">🔗 View original</a>
+        <button class="btn btn-secondary btn-sm" onclick="openSlotModalFromDetail()">✏️ Edit slot</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1812,11 +1828,8 @@ let state = {
   pendingAddRecipe: null,
   currentSlot: null, // { day, meal }
   currentView: 'week',
-  currentRecipeTab: 'search',
+  currentRecipeTab: 'mine',
   apiKey: '',
-  edamamId: '',
-  edamamKey: '',
-  apiPromptShown: false,
   // Sync
   jsonbinId: '',
   lastSyncedAt: 0,
@@ -1850,15 +1863,22 @@ function loadFromStorage() {
     } else {
       state.plans = { 0: saved.plan || {}, 1: {} };
     }
+    // Migrate any single-object slots to arrays (multi-recipe support)
+    [0, 1].forEach(w => {
+      if (!state.plans[w]) state.plans[w] = {};
+      Object.keys(state.plans[w]).forEach(slotKey => {
+        const val = state.plans[w][slotKey];
+        if (val && !Array.isArray(val)) {
+          state.plans[w][slotKey] = [val];
+        }
+      });
+    });
     state.plan = state.plans[0]; // always start on this week
     state.favorites = saved.favorites || [];
     state.history = saved.history || [];
     state.customRecipes = saved.customRecipes || [];
     state.groceryChecked = saved.groceryChecked || {};
     state.apiKey = saved.apiKey || '';
-    state.edamamId = saved.edamamId || '';
-    state.edamamKey = saved.edamamKey || '';
-    state.apiPromptShown = saved.apiPromptShown || false;
     state.jsonbinId = saved.jsonbinId || '';
     state.lastSyncedAt = saved.lastSyncedAt || 0;
     state.todoistKey = saved.todoistKey || '';
@@ -1866,8 +1886,6 @@ function loadFromStorage() {
 
   // Populate settings fields
   document.getElementById('settings-api-key').value = state.apiKey;
-  document.getElementById('settings-edamam-id').value = state.edamamId;
-  document.getElementById('settings-edamam-key').value = state.edamamKey;
   document.getElementById('settings-jsonbin-id').value = state.jsonbinId;
   document.getElementById('settings-todoist-key').value = state.todoistKey;
 }
@@ -1880,9 +1898,6 @@ function saveToStorage() {
     customRecipes: state.customRecipes,
     groceryChecked: state.groceryChecked,
     apiKey: state.apiKey,
-    edamamId: state.edamamId,
-    edamamKey: state.edamamKey,
-    apiPromptShown: state.apiPromptShown,
     jsonbinId: state.jsonbinId,
     lastSyncedAt: state.lastSyncedAt,
     todoistKey: state.todoistKey,
@@ -1906,19 +1921,17 @@ function switchView(v) {
     renderFavorites();
     renderHistory();
     renderCustomRecipes();
-    // Show built-in recipes on first visit if no API keys are set
-    const container = document.getElementById('search-results');
-    if (container.querySelector('.empty-state') && !state.apiKey && !state.edamamId) {
-      loadBuiltinRecipes();
-    }
+    switchRecipeTab('mine');
   }
 }
 
 function switchRecipeTab(tab) {
   state.currentRecipeTab = tab;
-  ['search','mine','favorites','history'].forEach(t => {
-    document.getElementById('rtab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('rtab-content-' + t).style.display = t === tab ? '' : 'none';
+  ['mine','favorites','history'].forEach(t => {
+    const btn = document.getElementById('rtab-' + t);
+    const content = document.getElementById('rtab-content-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (content) content.style.display = t === tab ? '' : 'none';
   });
   if (tab === 'mine') { renderCustomRecipes(); initPhotoImport(); }
 }
@@ -1942,8 +1955,6 @@ function toggleSettings() {
 
 function saveSettings() {
   state.apiKey = document.getElementById('settings-api-key').value.trim();
-  state.edamamId = document.getElementById('settings-edamam-id').value.trim();
-  state.edamamKey = document.getElementById('settings-edamam-key').value.trim();
   state.todoistKey = document.getElementById('settings-todoist-key').value.trim();
   const newBinId = document.getElementById('settings-jsonbin-id').value.trim();
   const syncChanged = newBinId !== state.jsonbinId;
@@ -1952,8 +1963,7 @@ function saveSettings() {
   localStorage.setItem('mealplanner', JSON.stringify({
     plans: state.plans, favorites: state.favorites, history: state.history,
     customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
-    apiKey: state.apiKey, edamamId: state.edamamId, edamamKey: state.edamamKey,
-    apiPromptShown: state.apiPromptShown,
+    apiKey: state.apiKey,
     jsonbinId: state.jsonbinId, lastSyncedAt: state.lastSyncedAt,
     todoistKey: state.todoistKey,
   }));
@@ -2019,27 +2029,29 @@ function renderWeekGrid() {
     html += `<div class="grid-cell grid-row-label"><span style="font-size:1rem;line-height:1;">${MEAL_EMOJIS[meal]}</span><span>${meal}</span></div>`;
     DAYS.forEach(day => {
       const key = `${day}-${meal}`;
-      const slot = state.plan[key];
-      if (slot) {
-        const servings = slot.servings || 1;
-        html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}">
-          <div class="meal-card-mini">
-            <div class="meal-name meal-name-clickable" onclick="openRecipeDetail('${key}')" title="View recipe">${escHtml(slot.name)}</div>
+      const slots = state.plan[key]; // now an array
+      if (slots && slots.length) {
+        html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}">`;
+        slots.forEach((slot, idx) => {
+          const servings = slot.servings || 1;
+          html += `<div class="meal-card-mini">
+            <div class="meal-name meal-name-clickable" onclick="openRecipeDetail('${key}',${idx})" title="View recipe">${escHtml(slot.name)}</div>
             ${slot.source === 'ai' ? '<div class="ai-generated-badge">✨ AI</div>' : ''}
             <div class="servings-control">
-              <button onclick="changeServings('${key}', -1)" title="Fewer servings">−</button>
+              <button onclick="changeServings('${key}',${idx},-1)" title="Fewer servings">−</button>
               <span class="servings-count">${servings}</span>
-              <button onclick="changeServings('${key}', 1)" title="More servings">+</button>
+              <button onclick="changeServings('${key}',${idx},1)" title="More servings">+</button>
               <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
             </div>
             <div class="meal-actions">
-              <button onclick="openRecipeDetail('${key}')" title="View recipe">👁</button>
-              <button onclick="openSlotModal('${day}','${meal}')" title="Change">✏️</button>
-              <button onclick="removeMeal('${key}')" title="Remove">✕</button>
-              ${!isFavorite(slot.name) ? `<button onclick="saveFavoriteFromSlot('${key}')" title="Save">⭐</button>` : ''}
+              <button onclick="openRecipeDetail('${key}',${idx})" title="View recipe">👁</button>
+              <button onclick="removeMeal('${key}',${idx})" title="Remove">✕</button>
+              ${!isFavorite(slot.name) ? `<button onclick="saveFavoriteFromSlot('${key}',${idx})" title="Save">⭐</button>` : ''}
             </div>
-          </div>
-        </div>`;
+          </div>`;
+        });
+        html += `<button class="add-more-btn" onclick="openSlotModal('${day}','${meal}')" title="Add another recipe">+ Add recipe</button>`;
+        html += `</div>`;
       } else {
         html += `<div class="grid-cell meal-slot ${meal} empty" data-key="${key}" onclick="openSlotModal('${day}','${meal}')">
           <button class="add-btn">+</button>
@@ -2051,19 +2063,27 @@ function renderWeekGrid() {
   grid.innerHTML = html;
 }
 
-function removeMeal(key) {
-  delete state.plan[key];
+function removeMeal(key, idx) {
+  if (!state.plan[key]) return;
+  if (typeof idx === 'number') {
+    state.plan[key].splice(idx, 1);
+    if (!state.plan[key].length) delete state.plan[key];
+  } else {
+    delete state.plan[key];
+  }
   saveToStorage();
   renderWeekGrid();
   renderGroceryList();
   toast('Meal removed');
 }
 
-function changeServings(key, delta) {
+function changeServings(key, idx, delta) {
   if (!state.plan[key]) return;
-  const current = state.plan[key].servings || 1;
+  const slot = Array.isArray(state.plan[key]) ? state.plan[key][idx] : state.plan[key];
+  if (!slot) return;
+  const current = slot.servings || 1;
   const next = Math.max(1, current + delta);
-  state.plan[key].servings = next;
+  slot.servings = next;
   saveToStorage();
   renderWeekGrid();
   renderGroceryList();
@@ -2142,27 +2162,8 @@ function openSlotModal(day, meal) {
   document.getElementById('slot-manual-input').value = '';
   document.getElementById('slot-results').innerHTML = '';
 
-  // Reset ingredient builder
+  // Reset ingredient builder (always start fresh — multiple recipes per slot)
   initIngBuilder('slot-ing-rows');
-
-  // Pre-fill with existing meal if editing
-  const key = `${day}-${meal}`;
-  if (state.plan[key]) {
-    document.getElementById('slot-manual-input').value = state.plan[key].name;
-    if (state.plan[key].ingredients && state.plan[key].ingredients.length) {
-      populateIngBuilder('slot-ing-rows', state.plan[key].ingredients);
-    }
-  }
-
-  // Show/hide AI button based on key presence
-  const aiBtn = document.getElementById('slot-ai-btn');
-  if (!state.apiKey) {
-    aiBtn.title = 'Add Anthropic API key in Settings to use AI';
-    aiBtn.style.opacity = '0.5';
-  } else {
-    aiBtn.title = 'AI suggest a meal';
-    aiBtn.style.opacity = '1';
-  }
 
   // Render the saved recipe picker
   renderSlotSavedList();
@@ -2186,59 +2187,27 @@ function closeSlotModal(e, force) {
   }
 }
 
-async function slotSearch() {
-  const q = document.getElementById('slot-search-input').value.trim();
-  if (!q) return;
+function slotSearch() {
+  const q = document.getElementById('slot-search-input').value.trim().toLowerCase();
   const results = document.getElementById('slot-results');
+  if (!q) { results.innerHTML = ''; return; }
 
-  if (!state.apiKey && !state.edamamId) {
-    results.innerHTML = `<div class="empty-state">
-      <div class="emoji">🔑</div>
-      <h3>No API key configured</h3>
-      <p>Add an Anthropic or Edamam API key in <strong>Settings</strong> (⚙️) to enable recipe search. Or type a meal name in the box above and hit <strong>+ Add</strong>.</p>
-    </div>`;
-    return;
-  }
+  // Search across custom recipes and favorites
+  const pool = [
+    ...state.customRecipes,
+    ...state.favorites.filter(f => !state.customRecipes.some(c => c.name === f.name)),
+  ];
+  const matches = pool.filter(r =>
+    r.name.toLowerCase().includes(q) ||
+    (r.ingredients || []).some(i => i.toLowerCase().includes(q))
+  );
 
-  results.innerHTML = `<div class="loading-state"><div class="spinner dark"></div><div>Searching…</div></div>`;
-
-  let recipes = [];
-  try {
-    recipes = await searchRecipeAPI(q);
-  } catch(e) {
-    results.innerHTML = `<div class="empty-state"><div class="emoji">⚠️</div><h3>Search failed</h3><p>${escHtml(e.message)}</p></div>`;
-    return;
-  }
-
-  if (!recipes.length) {
+  if (!matches.length) {
     results.innerHTML = `<div class="empty-state"><div class="emoji">😕</div><h3>No results found</h3><p>Try different keywords, or just type the meal name above and hit + Add.</p></div>`;
     return;
   }
 
-  results.innerHTML = recipes.map((r, i) => recipeCardHTML(r, i, 'slot')).join('');
-}
-
-async function slotAISuggest() {
-  if (!state.apiKey) { toast('Add your Anthropic API key in Settings', 'error'); return; }
-  const slot = state.currentSlot;
-  if (!slot) return;
-
-  const btn = document.querySelector('#slot-modal .btn-primary');
-  btn.disabled = true;
-  btn.innerHTML = `<div class="spinner"></div> Generating…`;
-
-  const results = document.getElementById('slot-results');
-  results.innerHTML = `<div class="loading-state"><div class="spinner dark"></div><div>AI is suggesting a meal…</div></div>`;
-
-  try {
-    const meal = await askClaudeForMeal(slot.meal, `a single ${slot.meal} idea`);
-    results.innerHTML = recipeCardHTML(meal, 0, 'slot');
-  } catch(e) {
-    results.innerHTML = `<div class="empty-state"><div class="emoji">⚠️</div><h3>Error</h3><p>${escHtml(e.message)}</p></div>`;
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '✨ AI Suggest';
-  }
+  results.innerHTML = matches.map((r, i) => recipeCardHTML(r, i, 'slot')).join('');
 }
 
 // Internal: actually assigns meal without showing checklist (used after checklist confirm)
@@ -2254,7 +2223,9 @@ function _doAssignMealToSlot(recipe, checkedIngredients) {
   if (checkedIngredients !== null) {
     mealToStore._groceryIngredients = checkedIngredients;
   }
-  state.plan[key] = mealToStore;
+  // Push to array (multiple recipes per slot)
+  if (!state.plan[key]) state.plan[key] = [];
+  state.plan[key].push(mealToStore);
   state.groceryChecked = {};
   saveToStorage();
   renderWeekGrid();
@@ -2353,11 +2324,17 @@ function confirmIngCheck() {
 // ══════════════════════════════════════════════════════════════════════
 
 let _recipeDetailKey = null;
+let _recipeDetailIdx = 0;
+let _cookServings = 1; // view-only scaler — does not affect state.plan
 
-function openRecipeDetail(key) {
-  const slot = state.plan[key];
+function openRecipeDetail(key, idx) {
+  const slots = state.plan[key];
+  if (!slots || !slots.length) return;
+  const slotIdx = typeof idx === 'number' ? idx : 0;
+  const slot = Array.isArray(slots) ? slots[slotIdx] : slots;
   if (!slot) return;
   _recipeDetailKey = key;
+  _recipeDetailIdx = slotIdx;
 
   // Parse day/meal from key e.g. "Monday-dinner"
   const dashIdx = key.indexOf('-');
@@ -2385,8 +2362,10 @@ function openRecipeDetail(key) {
   if (slot.calories) metaHtml += `<span class="recipe-detail-chip">🔥 ${escHtml(slot.calories)} cal</span>`;
   meta.innerHTML = metaHtml;
 
-  // Servings counter in footer
+  // Servings counters in footer
   document.getElementById('recipe-detail-servings-count').textContent = servings;
+  _cookServings = servings; // start cook-for at same as plan servings
+  document.getElementById('recipe-detail-cook-count').textContent = _cookServings;
 
   // URL button
   const urlBtn = document.getElementById('recipe-detail-url-btn');
@@ -2397,8 +2376,8 @@ function openRecipeDetail(key) {
     urlBtn.style.display = 'none';
   }
 
-  // Body: ingredients + instructions
-  _renderRecipeDetailBody(slot, servings);
+  // Body: ingredients + instructions (use cook servings for display)
+  _renderRecipeDetailBody(slot, _cookServings);
 
   document.getElementById('recipe-detail-overlay').classList.add('open');
 }
@@ -2409,9 +2388,15 @@ function _renderRecipeDetailBody(slot, servings) {
   const notes = slot.notes || '';
 
   // Left column: ingredients
-  const perServingNote = slot.defaultServings && slot.defaultServings > 1
-    ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;">Per serving × ${servings} (recipe makes ${slot.defaultServings})</div>`
-    : (servings !== 1 ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;">Scaled to ${servings} serving${servings !== 1 ? 's' : ''}</div>` : '');
+  // "servings" here is _cookServings (the view-only cooking amount)
+  const planServings = slot.servings || 1;
+  let perServingNote = '';
+  if (servings !== 1 || slot.defaultServings) {
+    const parts = [];
+    if (slot.defaultServings && slot.defaultServings > 1) parts.push(`recipe makes ${slot.defaultServings}`);
+    parts.push(`cooking for ${servings}`);
+    perServingNote = `<div style="font-size:0.72rem;color:var(--accent-dark);font-weight:600;margin-bottom:8px;">📐 ${parts.join(' · ')}</div>`;
+  }
   let ingsHtml = `<div>
     <div class="recipe-detail-section-label">Ingredients</div>
     ${perServingNote}`;
@@ -2459,21 +2444,36 @@ function _renderRecipeDetailBody(slot, servings) {
   body.innerHTML = ingsHtml + notesHtml;
 }
 
-function recipeDetailChangeServings(delta) {
+// Changes the plan's saved servings (affects grocery list + grid display)
+function recipeDetailChangePlanServings(delta) {
   if (!_recipeDetailKey || !state.plan[_recipeDetailKey]) return;
-  const current = state.plan[_recipeDetailKey].servings || 1;
+  const slots = state.plan[_recipeDetailKey];
+  const slot = Array.isArray(slots) ? slots[_recipeDetailIdx] : slots;
+  if (!slot) return;
+  const current = slot.servings || 1;
   const next = Math.max(1, current + delta);
-  state.plan[_recipeDetailKey].servings = next;
+  slot.servings = next;
   saveToStorage();
   renderWeekGrid();
   renderGroceryList();
 
-  // Update the modal UI without closing it
-  const slot = state.plan[_recipeDetailKey];
+  // Update plan servings counter
   document.getElementById('recipe-detail-servings-count').textContent = next;
   const chip = document.getElementById('recipe-detail-servings-chip');
   if (chip) chip.textContent = `👤 ${next} serving${next !== 1 ? 's' : ''}`;
-  _renderRecipeDetailBody(slot, next);
+  // Keep ingredients scaled to cook servings (not plan servings)
+  _renderRecipeDetailBody(slot, _cookServings);
+}
+
+// Changes only the ingredient display — does NOT affect the plan or grocery list
+function recipeDetailChangeCookServings(delta) {
+  if (!_recipeDetailKey || !state.plan[_recipeDetailKey]) return;
+  const slots = state.plan[_recipeDetailKey];
+  const slot = Array.isArray(slots) ? slots[_recipeDetailIdx] : slots;
+  if (!slot) return;
+  _cookServings = Math.max(1, _cookServings + delta);
+  document.getElementById('recipe-detail-cook-count').textContent = _cookServings;
+  _renderRecipeDetailBody(slot, _cookServings);
 }
 
 function closeRecipeDetail(e, force) {
@@ -2491,80 +2491,6 @@ function openSlotModalFromDetail() {
   const day = key.slice(0, dashIdx);
   const meal = key.slice(dashIdx + 1);
   openSlotModal(day, meal);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  AUTO SUGGEST WEEK
-// ══════════════════════════════════════════════════════════════════════
-
-async function autoSuggestWeek() {
-  if (!state.apiKey) { toast('Add your Anthropic API key in Settings first', 'error'); return; }
-
-  const btn = document.getElementById('auto-suggest-btn');
-  btn.disabled = true;
-  btn.innerHTML = `<div class="spinner"></div> Generating week…`;
-
-  try {
-    const prompt = `Create a complete 7-day meal plan (Monday through Sunday) with breakfast, lunch, and dinner for each day.
-Return ONLY a JSON object (no markdown, no explanation) with this exact structure:
-{
-  "Monday": {
-    "breakfast": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" },
-    "lunch": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" },
-    "dinner": { "name": "...", "ingredients": ["..."], "time": "...", "url": "" }
-  },
-  ... (all 7 days)
-}
-
-Requirements:
-- Varied and balanced meals throughout the week
-- Mix of cuisines (Mediterranean, Asian, American, Mexican, etc.)
-- Realistic meal names
-- ingredients: list 4-8 main ingredients for each meal
-- time: cooking time like "20 min", "45 min"
-- Keep it practical for home cooking`;
-
-    const data = await callClaude(prompt, 2048);
-    const text = data.content[0].text.trim();
-
-    // Extract JSON
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Invalid response from AI');
-    const week = JSON.parse(jsonMatch[0]);
-
-    // Populate plan (active week only)
-    state.plans[state.weekOffset] = {};
-    state.plan = state.plans[state.weekOffset];
-    DAYS.forEach(day => {
-      if (week[day]) {
-        MEALS.forEach(meal => {
-          if (week[day][meal]) {
-            const m = week[day][meal];
-            state.plan[`${day}-${meal}`] = {
-              name: m.name || 'Meal',
-              ingredients: m.ingredients || [],
-              time: m.time || '',
-              url: m.url || '',
-              source: 'ai',
-              image: null,
-            };
-          }
-        });
-      }
-    });
-
-    state.groceryChecked = {};
-    saveToStorage();
-    renderWeekGrid();
-    renderGroceryList();
-    toast('Week generated!', 'success');
-  } catch(e) {
-    console.error(e);
-    toast('Error: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '✨ Auto-suggest';
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2699,21 +2625,25 @@ function renderGroceryList() {
   // For same ingredient across multiple meals, we add quantities
   const ingMap = {}; // baseName → { scaled: string, qty: number|null, unit: string, rest: string, cat }
 
-  Object.values(state.plan).forEach(meal => {
-    const servings = meal.servings || 1;
-    // Use _groceryIngredients (user-selected subset) if available, else all ingredients
-    const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
-    if (!ings.length) return;
-    ings.forEach(ing => {
-      if (!ing || !ing.trim()) return;
-      const scaled = scaleIngredient(ing.trim(), servings);
-      const base = ingredientBaseName(ing.trim());
-      const cat = categorizeIngredient(ing);
+  Object.values(state.plan).forEach(slotVal => {
+    const meals = Array.isArray(slotVal) ? slotVal : [slotVal];
+    meals.forEach(meal => {
+      if (!meal) return;
+      const servings = meal.servings || 1;
+      // Use _groceryIngredients (user-selected subset) if available, else all ingredients
+      const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
+      if (!ings.length) return;
+      ings.forEach(ing => {
+        if (!ing || !ing.trim()) return;
+        const scaled = scaleIngredient(ing.trim(), servings);
+        const base = ingredientBaseName(ing.trim());
+        const cat = categorizeIngredient(ing);
 
-      if (!ingMap[base]) {
-        ingMap[base] = { lines: [], cat };
-      }
-      ingMap[base].lines.push(scaled);
+        if (!ingMap[base]) {
+          ingMap[base] = { lines: [], cat };
+        }
+        ingMap[base].lines.push(scaled);
+      });
     });
   });
 
@@ -2825,17 +2755,21 @@ function copyGroceryList() {
   const items = [];
   const ingMap = {};
 
-  Object.values(state.plan).forEach(meal => {
-    const servings = meal.servings || 1;
-    const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
-    if (!ings.length) return;
-    ings.forEach(ing => {
-      if (!ing || !ing.trim()) return;
-      const scaled = scaleIngredient(ing.trim(), servings);
-      const base = ingredientBaseName(ing.trim());
-      const cat = categorizeIngredient(ing);
-      if (!ingMap[base]) ingMap[base] = { lines: [], cat };
-      ingMap[base].lines.push(scaled);
+  Object.values(state.plan).forEach(slotVal => {
+    const meals = Array.isArray(slotVal) ? slotVal : [slotVal];
+    meals.forEach(meal => {
+      if (!meal) return;
+      const servings = meal.servings || 1;
+      const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
+      if (!ings.length) return;
+      ings.forEach(ing => {
+        if (!ing || !ing.trim()) return;
+        const scaled = scaleIngredient(ing.trim(), servings);
+        const base = ingredientBaseName(ing.trim());
+        const cat = categorizeIngredient(ing);
+        if (!ingMap[base]) ingMap[base] = { lines: [], cat };
+        ingMap[base].lines.push(scaled);
+      });
     });
   });
 
@@ -2946,18 +2880,22 @@ async function exportToTodoist() {
 
   // Collect grocery items grouped by category
   const ingMap = {};
-  Object.values(state.plan).forEach(meal => {
-    const servings = meal.servings || 1;
-    // Use _groceryIngredients (user-selected subset) if available, else all ingredients
-    const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
-    if (!ings.length) return;
-    ings.forEach(ing => {
-      if (!ing || !ing.trim()) return;
-      const scaled = scaleIngredient(ing.trim(), servings);
-      const base = ingredientBaseName(ing.trim());
-      const cat = categorizeIngredient(ing);
-      if (!ingMap[base]) ingMap[base] = { lines: [], cat };
-      ingMap[base].lines.push(scaled);
+  Object.values(state.plan).forEach(slotVal => {
+    const meals = Array.isArray(slotVal) ? slotVal : [slotVal];
+    meals.forEach(meal => {
+      if (!meal) return;
+      const servings = meal.servings || 1;
+      // Use _groceryIngredients (user-selected subset) if available, else all ingredients
+      const ings = meal._groceryIngredients !== undefined ? meal._groceryIngredients : (meal.ingredients || []);
+      if (!ings.length) return;
+      ings.forEach(ing => {
+        if (!ing || !ing.trim()) return;
+        const scaled = scaleIngredient(ing.trim(), servings);
+        const base = ingredientBaseName(ing.trim());
+        const cat = categorizeIngredient(ing);
+        if (!ingMap[base]) ingMap[base] = { lines: [], cat };
+        ingMap[base].lines.push(scaled);
+      });
     });
   });
 
@@ -3021,176 +2959,8 @@ async function exportToTodoist() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  RECIPE SEARCH
+//  RECIPE CARD
 // ══════════════════════════════════════════════════════════════════════
-
-function loadBuiltinRecipes() {
-  const container = document.getElementById('search-results');
-  const ideas = getBuiltinRecipes('');
-  state.searchResults = ideas;
-  container.innerHTML = `
-    <div style="grid-column:1/-1;margin-bottom:4px;">
-      <div class="select-slot-hint">💡 Showing built-in recipe ideas. Add an API key in ⚙️ Settings for full recipe search.</div>
-    </div>
-    ${ideas.map((r, i) => recipeCardHTML(r, i, 'search')).join('')}`;
-}
-
-async function searchRecipes() {
-  const q = document.getElementById('recipe-search-input').value.trim();
-
-  if (state.currentView !== 'recipes') switchView('recipes');
-  switchRecipeTab('search');
-
-  const container = document.getElementById('search-results');
-
-  // No API keys — search built-ins only
-  if (!state.apiKey && !state.edamamId) {
-    const ideas = getBuiltinRecipes(q);
-    state.searchResults = ideas;
-    container.innerHTML = `
-      <div style="grid-column:1/-1;margin-bottom:4px;">
-        <div class="select-slot-hint">💡 Showing built-in recipe ideas. Add an API key in ⚙️ Settings for full recipe search.</div>
-      </div>
-      ${ideas.map((r, i) => recipeCardHTML(r, i, 'search')).join('')}`;
-    return;
-  }
-
-  if (!q) return;
-
-  container.innerHTML = `<div class="loading-state" style="grid-column:1/-1"><div class="spinner dark"></div><div>Searching for "${escHtml(q)}"…</div></div>`;
-
-  let recipes = [];
-  try {
-    recipes = await searchRecipeAPI(q);
-  } catch(e) {
-    console.error(e);
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">⚠️</div><h3>Error</h3><p>${escHtml(e.message)}</p></div>`;
-    return;
-  }
-
-  state.searchResults = recipes;
-
-  if (!recipes.length) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">😕</div><h3>No results</h3><p>Try different keywords.</p></div>`;
-    return;
-  }
-
-  container.innerHTML = recipes.map((r, i) => recipeCardHTML(r, i, 'search')).join('');
-}
-
-// Built-in recipe ideas (no API needed)
-const BUILTIN_RECIPES = [
-  { name: 'Spaghetti Bolognese', time: '45 min', ingredients: ['ground beef', 'spaghetti', 'tomato sauce', 'onion', 'garlic', 'olive oil', 'parmesan'], url: '', source: 'builtin', image: null },
-  { name: 'Grilled Chicken Salad', time: '20 min', ingredients: ['chicken breast', 'romaine lettuce', 'cherry tomatoes', 'cucumber', 'olive oil', 'lemon', 'feta cheese'], url: '', source: 'builtin', image: null },
-  { name: 'Veggie Stir-Fry', time: '15 min', ingredients: ['broccoli', 'bell pepper', 'snap peas', 'carrot', 'soy sauce', 'garlic', 'ginger', 'rice'], url: '', source: 'builtin', image: null },
-  { name: 'Avocado Toast', time: '10 min', ingredients: ['sourdough bread', 'avocado', 'lemon', 'red pepper flakes', 'eggs', 'olive oil'], url: '', source: 'builtin', image: null },
-  { name: 'Chicken Tacos', time: '25 min', ingredients: ['chicken breast', 'tortillas', 'salsa', 'sour cream', 'cheddar cheese', 'lettuce', 'lime'], url: '', source: 'builtin', image: null },
-  { name: 'Tomato Soup', time: '30 min', ingredients: ['canned tomatoes', 'onion', 'garlic', 'vegetable broth', 'cream', 'basil', 'butter'], url: '', source: 'builtin', image: null },
-  { name: 'Salmon with Roasted Veggies', time: '35 min', ingredients: ['salmon fillet', 'asparagus', 'cherry tomatoes', 'olive oil', 'garlic', 'lemon', 'dill'], url: '', source: 'builtin', image: null },
-  { name: 'Greek Salad', time: '10 min', ingredients: ['cucumber', 'tomatoes', 'red onion', 'kalamata olives', 'feta cheese', 'olive oil', 'oregano'], url: '', source: 'builtin', image: null },
-  { name: 'Omelette', time: '10 min', ingredients: ['eggs', 'butter', 'cheddar cheese', 'spinach', 'mushrooms', 'salt', 'pepper'], url: '', source: 'builtin', image: null },
-  { name: 'Lentil Soup', time: '40 min', ingredients: ['red lentils', 'onion', 'garlic', 'carrot', 'cumin', 'turmeric', 'vegetable broth', 'lemon'], url: '', source: 'builtin', image: null },
-  { name: 'Beef Stir-Fry', time: '20 min', ingredients: ['beef strips', 'broccoli', 'soy sauce', 'garlic', 'ginger', 'sesame oil', 'rice'], url: '', source: 'builtin', image: null },
-  { name: 'Pancakes', time: '20 min', ingredients: ['flour', 'eggs', 'milk', 'butter', 'baking powder', 'sugar', 'maple syrup'], url: '', source: 'builtin', image: null },
-  { name: 'Caprese Pasta', time: '20 min', ingredients: ['pasta', 'mozzarella', 'cherry tomatoes', 'basil', 'olive oil', 'garlic', 'balsamic glaze'], url: '', source: 'builtin', image: null },
-  { name: 'Baked Potato with Toppings', time: '60 min', ingredients: ['russet potato', 'butter', 'sour cream', 'cheddar cheese', 'bacon bits', 'chives'], url: '', source: 'builtin', image: null },
-  { name: 'Shrimp Fried Rice', time: '20 min', ingredients: ['shrimp', 'cooked rice', 'eggs', 'soy sauce', 'garlic', 'peas', 'sesame oil', 'scallions'], url: '', source: 'builtin', image: null },
-  { name: 'Banana Smoothie', time: '5 min', ingredients: ['banana', 'milk', 'yogurt', 'honey', 'peanut butter'], url: '', source: 'builtin', image: null },
-  { name: 'Chicken Curry', time: '40 min', ingredients: ['chicken', 'coconut milk', 'curry paste', 'onion', 'garlic', 'ginger', 'tomatoes', 'rice'], url: '', source: 'builtin', image: null },
-  { name: 'Caesar Salad', time: '15 min', ingredients: ['romaine lettuce', 'parmesan', 'croutons', 'caesar dressing', 'black pepper', 'lemon'], url: '', source: 'builtin', image: null },
-  { name: 'Grilled Cheese Sandwich', time: '10 min', ingredients: ['sourdough bread', 'cheddar cheese', 'butter', 'tomato'], url: '', source: 'builtin', image: null },
-  { name: 'Overnight Oats', time: '5 min', ingredients: ['rolled oats', 'milk', 'yogurt', 'honey', 'berries', 'chia seeds'], url: '', source: 'builtin', image: null },
-  { name: 'Black Bean Tacos', time: '15 min', ingredients: ['black beans', 'corn tortillas', 'avocado', 'salsa', 'lime', 'cilantro', 'sour cream'], url: '', source: 'builtin', image: null },
-  { name: 'Mushroom Risotto', time: '35 min', ingredients: ['arborio rice', 'mushrooms', 'onion', 'garlic', 'white wine', 'parmesan', 'butter', 'vegetable broth'], url: '', source: 'builtin', image: null },
-  { name: 'Tuna Salad Sandwich', time: '10 min', ingredients: ['canned tuna', 'mayo', 'celery', 'onion', 'lemon', 'bread', 'lettuce'], url: '', source: 'builtin', image: null },
-  { name: 'Turkey Meatballs', time: '30 min', ingredients: ['ground turkey', 'breadcrumbs', 'egg', 'garlic', 'parsley', 'parmesan', 'tomato sauce', 'pasta'], url: '', source: 'builtin', image: null },
-];
-
-function getBuiltinRecipes(query) {
-  if (!query) return [...BUILTIN_RECIPES].sort(() => Math.random() - 0.5).slice(0, 12);
-  const q = query.toLowerCase();
-  const scored = BUILTIN_RECIPES.map(r => {
-    let score = 0;
-    if (r.name.toLowerCase().includes(q)) score += 10;
-    if (r.ingredients.some(i => i.toLowerCase().includes(q))) score += 5;
-    return { r, score };
-  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
-  if (scored.length) return scored.map(x => x.r);
-  // No match — return random sample as inspiration
-  return [...BUILTIN_RECIPES].sort(() => Math.random() - 0.5).slice(0, 8);
-}
-
-async function searchRecipeAPI(query) {
-  if (state.edamamId && state.edamamKey) {
-    return await searchEdamam(query);
-  } else if (state.apiKey) {
-    return await searchViaAI(query);
-  } else {
-    throw new Error('Please add an API key (Anthropic or Edamam) in Settings to search recipes.');
-  }
-}
-
-async function searchEdamam(query) {
-  const url = `https://api.edamam.com/search?q=${encodeURIComponent(query)}&app_id=${state.edamamId}&app_key=${state.edamamKey}&to=12`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Edamam error ${res.status}`);
-  const data = await res.json();
-  return (data.hits || []).map(h => {
-    const r = h.recipe;
-    return {
-      name: r.label,
-      image: r.image,
-      time: r.totalTime ? `${r.totalTime} min` : '',
-      ingredients: (r.ingredientLines || []).slice(0, 8),
-      url: r.url,
-      source: 'edamam',
-      calories: r.calories ? Math.round(r.calories / (r.yield || 1)) + ' cal/serving' : '',
-      yield: r.yield,
-    };
-  });
-}
-
-async function searchViaAI(query) {
-  const prompt = `Generate 6 realistic recipes for "${query}".
-Return ONLY a JSON array (no markdown) with this structure:
-[
-  {
-    "name": "Recipe Name",
-    "time": "30 min",
-    "ingredients": ["ingredient 1", "ingredient 2", ...],
-    "description": "One sentence description",
-    "url": ""
-  }
-]
-Requirements: 6 varied recipes, 5-10 ingredients each, realistic cooking times.`;
-
-  const data = await callClaude(prompt, 1500);
-  const text = data.content[0].text.trim();
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) throw new Error('Invalid AI response');
-  const arr = JSON.parse(jsonMatch[0]);
-  return arr.map(r => ({ ...r, source: 'ai', image: null }));
-}
-
-async function askClaudeForMeal(mealType, description) {
-  const prompt = `Suggest ${description} for ${mealType}.
-Return ONLY a JSON object (no markdown):
-{
-  "name": "Meal Name",
-  "time": "cooking time",
-  "ingredients": ["ingredient 1", "ingredient 2", ...],
-  "description": "one sentence description",
-  "url": ""
-}
-Requirements: realistic, home-cooking friendly, 5-8 ingredients.`;
-
-  const data = await callClaude(prompt, 512);
-  const text = data.content[0].text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Invalid AI response');
-  const meal = JSON.parse(jsonMatch[0]);
-  return { ...meal, source: 'ai', image: null };
-}
 
 // ══════════════════════════════════════════════════════════════════════
 //  RECIPE CARD
@@ -3288,7 +3058,9 @@ function _doConfirmAddToPlan(recipe, checkedIngredients) {
   if (checkedIngredients !== null) {
     mealToStore._groceryIngredients = checkedIngredients;
   }
-  state.plan[key] = mealToStore;
+  // Push to array (multiple recipes per slot)
+  if (!state.plan[key]) state.plan[key] = [];
+  state.plan[key].push(mealToStore);
   state.groceryChecked = {};
   saveToStorage();
   renderWeekGrid();
@@ -3320,8 +3092,10 @@ function toggleFavorite(recipe, btn) {
   renderFavorites();
 }
 
-function saveFavoriteFromSlot(key) {
-  const recipe = state.plan[key];
+function saveFavoriteFromSlot(key, idx) {
+  const slots = state.plan[key];
+  if (!slots) return;
+  const recipe = Array.isArray(slots) ? slots[typeof idx === 'number' ? idx : 0] : slots;
   if (!recipe) return;
   if (!isFavorite(recipe.name)) {
     state.favorites.unshift({ ...recipe, savedAt: Date.now() });
@@ -3502,13 +3276,17 @@ function saveCustomRecipe() {
         defaultServings,
         updatedAt: Date.now(),
       };
-      // Also update any plan slots that reference this recipe by name
+      // Also update any plan slots that reference this recipe by id (multi-recipe aware)
       Object.keys(state.plans).forEach(weekKey => {
         Object.keys(state.plans[weekKey]).forEach(slotKey => {
-          const slot = state.plans[weekKey][slotKey];
-          if (slot && slot.id === _editingRecipeId) {
-            state.plans[weekKey][slotKey] = { ...state.plans[weekKey][slotKey], ...state.customRecipes[idx] };
-          }
+          const slotVal = state.plans[weekKey][slotKey];
+          const arr = Array.isArray(slotVal) ? slotVal : (slotVal ? [slotVal] : []);
+          arr.forEach((slot, i) => {
+            if (slot && slot.id === _editingRecipeId) {
+              arr[i] = { ...slot, ...state.customRecipes[idx] };
+            }
+          });
+          if (Array.isArray(slotVal)) state.plans[weekKey][slotKey] = arr;
         });
       });
       state.plan = state.plans[state.weekOffset];
@@ -3925,10 +3703,13 @@ function renderHistory() {
     DAYS.forEach(day => {
       MEALS.forEach(meal => {
         const key = `${day}-${meal}`;
-        if (entry.plan[key]) {
+        const slotVal = entry.plan[key];
+        if (slotVal) {
+          const meals = Array.isArray(slotVal) ? slotVal : [slotVal];
+          const names = meals.map(m => escHtml(m.name)).join(', ');
           mealItems.push(`<div class="history-meal-item">
             <div class="day-label">${day.slice(0,3)} ${meal}</div>
-            <div>${escHtml(entry.plan[key].name)}</div>
+            <div>${names}</div>
           </div>`);
         }
       });
@@ -3947,7 +3728,13 @@ function renderHistory() {
 function loadHistoryWeek(index) {
   const label = state.weekOffset === 0 ? 'this week' : 'next week';
   if (!confirm(`This will replace ${label}. Continue?`)) return;
-  state.plans[state.weekOffset] = JSON.parse(JSON.stringify(state.history[index].plan));
+  const restoredPlan = JSON.parse(JSON.stringify(state.history[index].plan));
+  // Migrate any single-object slots to arrays
+  Object.keys(restoredPlan).forEach(slotKey => {
+    const val = restoredPlan[slotKey];
+    if (val && !Array.isArray(val)) restoredPlan[slotKey] = [val];
+  });
+  state.plans[state.weekOffset] = restoredPlan;
   state.plan = state.plans[state.weekOffset];
   state.groceryChecked = {};
   saveToStorage();
@@ -4094,6 +3881,14 @@ async function pullFromCloud() {
     } else if (remote.plan) {
       state.plans = { 0: remote.plan, 1: state.plans[1] || {} };
     }
+    // Migrate any single-object slots to arrays (multi-recipe support)
+    [0, 1].forEach(w => {
+      if (!state.plans[w]) state.plans[w] = {};
+      Object.keys(state.plans[w]).forEach(slotKey => {
+        const val = state.plans[w][slotKey];
+        if (val && !Array.isArray(val)) state.plans[w][slotKey] = [val];
+      });
+    });
     state.plan          = state.plans[state.weekOffset];
     state.favorites     = remote.favorites     || state.favorites;
     state.history       = remote.history       || state.history;
