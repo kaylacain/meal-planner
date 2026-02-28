@@ -2222,17 +2222,57 @@ function copyGroceryList() {
 //  TODOIST EXPORT
 // ══════════════════════════════════════════════════════════════════════
 
-async function findGroceriesProject(token) {
+// Maps app grocery categories to Todoist section name keywords
+const TODOIST_SECTION_MAP = {
+  produce: ['produce', 'fruit', 'veg'],
+  meat:    ['meat', 'seafood', 'fish', 'poultry'],
+  dairy:   ['refrigerat', 'dairy', 'deli', 'cold'],
+  grains:  ['pantry', 'grain', 'bread', 'baking', 'dry'],
+  canned:  ['pantry', 'canned', 'can', 'jar'],
+  frozen:  ['frozen'],
+  other:   ['household', 'cleaning', 'personal', 'other', 'misc'],
+};
+
+function matchSectionId(cat, sections) {
+  const keywords = TODOIST_SECTION_MAP[cat] || ['other'];
+  for (const kw of keywords) {
+    const sec = sections.find(s => {
+      // Strip emojis and extra whitespace for matching
+      const name = s.name.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').toLowerCase().trim();
+      return name.includes(kw);
+    });
+    if (sec) return sec.id;
+  }
+  return null;
+}
+
+async function todoistFetch(token, path, options = {}) {
   const proxy = 'https://corsproxy.io/?url=';
-  const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/api/v1/projects'), {
-    headers: { 'Authorization': `Bearer ${token}` },
+  const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com' + path), {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
   });
+  return res;
+}
+
+async function findGroceriesProject(token) {
+  const res = await todoistFetch(token, '/api/v1/projects');
   if (!res.ok) throw new Error(`Todoist auth failed (HTTP ${res.status}) — check your API token`);
   const data = await res.json();
   const projects = Array.isArray(data) ? data : (data.results || data.items || []);
-  // Look for a project with "grocer" in the name (case-insensitive)
   const match = projects.find(p => p.name && p.name.toLowerCase().includes('grocer'));
   return match ? match.id : null;
+}
+
+async function fetchSections(token, projectId) {
+  const res = await todoistFetch(token, `/api/v1/sections?project_id=${projectId}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.results || data.items || []);
 }
 
 async function exportToTodoist() {
@@ -2242,7 +2282,7 @@ async function exportToTodoist() {
     return;
   }
 
-  // Collect grocery items (same logic as copyGroceryList)
+  // Collect grocery items grouped by category
   const ingMap = {};
   Object.values(state.plan).forEach(meal => {
     const servings = meal.servings || 1;
@@ -2257,21 +2297,18 @@ async function exportToTodoist() {
     });
   });
 
-  const allItems = [];
-  const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
-  const cats = {};
+  // Build list of { text, cat } items
+  const catItems = {}; // cat -> [text]
   for (const [, data] of Object.entries(ingMap)) {
     const text = data.lines.length === 1 ? data.lines[0] : tryMergeIngredients(data.lines);
-    if (!cats[data.cat]) cats[data.cat] = [];
-    cats[data.cat].push(text);
+    if (!catItems[data.cat]) catItems[data.cat] = [];
+    catItems[data.cat].push(text);
   }
-  orderedCats.forEach(catKey => {
-    if (cats[catKey]) cats[catKey].forEach(t => allItems.push(t));
-  });
 
-  if (!allItems.length) { toast('Nothing to export — add meals with ingredients first', 'error'); return; }
+  const totalItems = Object.values(catItems).reduce((n, arr) => n + arr.length, 0);
+  if (!totalItems) { toast('Nothing to export — add meals with ingredients first', 'error'); return; }
 
-  toast(`Finding your Groceries project…`, 'success');
+  toast('Finding your Groceries project…', 'success');
 
   let projectId = null;
   try {
@@ -2281,29 +2318,39 @@ async function exportToTodoist() {
     return;
   }
 
-  toast(`Adding ${allItems.length} items to Todoist…`, 'success');
+  // Fetch sections if we have a project
+  let sections = [];
+  if (projectId) {
+    sections = await fetchSections(state.todoistKey, projectId);
+  }
+
+  toast(`Adding ${totalItems} items to Todoist…`, 'success');
 
   let added = 0;
   let failed = 0;
-  for (const item of allItems) {
-    try {
-      const body = { content: item };
-      if (projectId) body.project_id = projectId;
-      const proxy = 'https://corsproxy.io/?url=';
-      const res = await fetch(proxy + encodeURIComponent('https://api.todoist.com/api/v1/tasks'), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${state.todoistKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) { added++; } else { failed++; }
-    } catch(e) { failed++; }
+  const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
+
+  for (const cat of orderedCats) {
+    const items = catItems[cat];
+    if (!items || !items.length) continue;
+    const sectionId = sections.length ? matchSectionId(cat, sections) : null;
+
+    for (const item of items) {
+      try {
+        const body = { content: item };
+        if (projectId) body.project_id = projectId;
+        if (sectionId) body.section_id = sectionId;
+        const res = await todoistFetch(state.todoistKey, '/api/v1/tasks', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (res.ok) { added++; } else { failed++; }
+      } catch(e) { failed++; }
+    }
   }
 
   if (failed === 0) {
-    toast(`✅ ${added} items added to ${projectId ? 'Groceries' : 'Inbox'}!`, 'success');
+    toast(`✅ ${added} items added to ${projectId ? 'Groceries' : 'Inbox'}${sections.length ? ' with sections' : ''}!`, 'success');
   } else {
     toast(`Added ${added}, failed ${failed}. Check your token.`, 'error');
   }
