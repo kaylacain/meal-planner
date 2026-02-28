@@ -2275,12 +2275,7 @@ function renderWeekGrid() {
           html += `<div class="meal-card-mini" draggable="true" ondragstart="onCardDragStart(event,'${key}',${idx})" ondragend="onCardDragEnd(event)">
             <div class="meal-name meal-name-clickable" onclick="openRecipeDetail('${key}',${idx})" title="View recipe">${escHtml(slot.name)}</div>
             ${slot.source === 'ai' ? '<div class="ai-generated-badge">✨ AI</div>' : ''}
-            <div class="servings-control">
-              <button onclick="changeServings('${key}',${idx},-1)" title="Fewer servings">−</button>
-              <span class="servings-count">${servings}</span>
-              <button onclick="changeServings('${key}',${idx},1)" title="More servings">+</button>
-              <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
-            </div>
+            <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px;">${servings} serving${servings !== 1 ? 's' : ''}</div>
             <div class="meal-actions">
               <button onclick="removeMeal('${key}',${idx})" title="Remove">✕</button>
             </div>
