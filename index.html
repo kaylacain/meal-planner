@@ -393,6 +393,72 @@
     color: var(--text);
   }
 
+  /* ── SLOT CHOICE CARDS ── */
+  .slot-choice-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    margin-bottom: 10px;
+  }
+  .slot-choice-card:hover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+    box-shadow: var(--shadow);
+  }
+  .slot-choice-card:last-child { margin-bottom: 0; }
+  .slot-choice-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .slot-choice-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .slot-choice-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .slot-back-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 16px;
+    transition: color 0.12s;
+  }
+  .slot-back-btn:hover { color: var(--text); }
+  .slot-panel { display: none; }
+  .slot-panel.active { display: block; }
+  .slot-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .slot-section-label:first-child { margin-top: 0; }
+
   /* ── SYNC STATUS ── */
   .sync-status {
     display: flex;
@@ -1684,57 +1750,151 @@
       <button class="close-btn" onclick="closeSlotModal(null, true)">✕</button>
     </div>
     <div class="modal-body">
+      <button class="slot-back-btn" id="slot-back-btn" onclick="showSlotPanel('home')">← Back</button>
 
-      <!-- Manual entry (always available) -->
-      <div style="margin-bottom:16px;">
-        <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">MEAL NAME</label>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <input type="text" id="slot-manual-input" placeholder="e.g. Pasta Bolognese, Grilled Salmon…"
-            onkeydown="if(event.key==='Enter') addManualMeal()" style="flex:1;" />
-          <button class="btn btn-primary" onclick="addManualMeal()">+ Add</button>
+      <!-- ── PANEL: HOME ── -->
+      <div class="slot-panel active" id="slot-panel-home">
+        <button class="slot-choice-card" onclick="showSlotPanel('meal')">
+          <div class="slot-choice-icon">🍽</div>
+          <div>
+            <div class="slot-choice-label">Add a Meal</div>
+            <div class="slot-choice-sub">Quick entry — name and ingredients</div>
+          </div>
+        </button>
+        <button class="slot-choice-card" onclick="showSlotPanel('recipe')">
+          <div class="slot-choice-icon">📖</div>
+          <div>
+            <div class="slot-choice-label">Add a New Recipe</div>
+            <div class="slot-choice-sub">Import from photo or URL, or create manually — saves to My Recipes</div>
+          </div>
+        </button>
+        <button class="slot-choice-card" onclick="showSlotPanel('existing'); renderSlotPopular(); renderSlotSavedList();">
+          <div class="slot-choice-icon">⭐</div>
+          <div>
+            <div class="slot-choice-label">Select from Existing</div>
+            <div class="slot-choice-sub">My Recipes, Favorites, or search</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- ── PANEL: ADD A MEAL ── -->
+      <div class="slot-panel" id="slot-panel-meal">
+        <div class="form-group">
+          <label>Meal Name</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="slot-manual-input" placeholder="e.g. Pasta Bolognese, Grilled Salmon…"
+              onkeydown="if(event.key==='Enter') addManualMeal()" style="flex:1;" />
+            <button class="btn btn-primary" onclick="addManualMeal()">+ Add</button>
+          </div>
         </div>
-        <label style="display:inline-flex;align-items:center;gap:7px;font-size:0.8rem;color:var(--text-muted);cursor:pointer;margin-bottom:4px;">
+        <label style="display:inline-flex;align-items:center;gap:7px;font-size:0.8rem;color:var(--text-muted);cursor:pointer;margin-bottom:12px;">
           <input type="checkbox" id="slot-save-recipe-checkbox" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;" />
           Save as a new recipe
         </label>
-        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:5px;">Ingredients per 1 serving (optional)</label>
-        <div class="ing-builder">
-          <div class="ing-builder-header">
-            <span>Qty</span><span>Unit</span><span>Ingredient</span><span></span>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Ingredients per 1 serving (optional)</label>
+          <div class="ing-builder">
+            <div class="ing-builder-header"><span>Qty</span><span>Unit</span><span>Ingredient</span><span></span></div>
+            <div id="slot-ing-rows"></div>
           </div>
-          <div id="slot-ing-rows"></div>
+          <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface2);padding:6px 8px;">
+            <button class="btn btn-ghost btn-sm" onclick="addIngRow('slot-ing-rows')" style="padding:4px 10px;">+ Add ingredient</button>
+          </div>
         </div>
-        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface2);padding:6px 8px;">
-          <button class="btn btn-ghost btn-sm" onclick="addIngRow('slot-ing-rows')" style="padding:4px 10px;">+ Add ingredient</button>
+      </div>
+
+      <!-- ── PANEL: ADD A NEW RECIPE ── -->
+      <div class="slot-panel" id="slot-panel-recipe">
+        <!-- Photo import -->
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;border:1px solid var(--border);">
+          <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;">📷 Import from Photo</div>
+          <input type="file" id="slot-photo-file-input" accept="image/*" style="display:none;" onchange="addSlotPhotoFiles(this.files)" />
+          <div id="slot-photo-dropzone" class="photo-dropzone" style="padding:16px 12px;" onclick="document.getElementById('slot-photo-file-input').click()">
+            <div class="photo-dropzone-icon">📷</div>
+            <div class="photo-dropzone-text" style="font-size:0.82rem;">Tap to choose a photo</div>
+            <div class="photo-dropzone-sub">JPEG, PNG, HEIC — up to 3</div>
+          </div>
+          <div id="slot-photo-thumbnails" class="photo-thumbnails"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="slot-photo-parse-btn" onclick="parseSlotPhotosWithClaude()" style="display:none;">✨ Parse Recipe</button>
+            <button class="btn btn-secondary btn-sm" id="slot-photo-add-btn" onclick="document.getElementById('slot-photo-file-input').click()" style="display:none;">+ Add photo</button>
+            <button class="btn btn-ghost btn-sm" id="slot-photo-clear-btn" onclick="initSlotPhotoImport()" style="display:none;">✕ Clear</button>
+          </div>
+          <div id="slot-photo-import-status" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted);"></div>
+        </div>
+        <!-- URL import -->
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;border:1px solid var(--border);">
+          <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;">🔗 Import from URL</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="url" id="slot-url-import-input" placeholder="https://www.allrecipes.com/recipe/…" style="flex:1;min-width:160px;" />
+            <button class="btn btn-primary btn-sm" onclick="importFromUrlSlot()">📥 Import</button>
+          </div>
+          <div id="slot-url-import-status" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted);"></div>
+        </div>
+        <!-- Manual form -->
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
+          <div style="font-size:0.85rem;font-weight:700;margin-bottom:12px;">✏️ Manual Entry</div>
+          <div class="form-group">
+            <label>Recipe Name *</label>
+            <input type="text" id="slot-recipe-name" placeholder="e.g. Mom's Chicken Soup" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-group">
+              <label>Prep / Cook Time</label>
+              <input type="text" id="slot-recipe-time" placeholder="e.g. 30 min" />
+            </div>
+            <div class="form-group">
+              <label>Default Servings</label>
+              <input type="number" id="slot-recipe-servings" placeholder="e.g. 4" min="1" max="99" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Source URL (optional)</label>
+            <input type="url" id="slot-recipe-url" placeholder="https://…" />
+          </div>
+          <div class="form-group">
+            <label>Ingredients <span style="font-weight:400;color:var(--text-muted);">(per 1 serving)</span></label>
+            <div class="ing-builder">
+              <div class="ing-builder-header"><span>Qty</span><span>Unit</span><span>Ingredient</span><span></span></div>
+              <div id="slot-recipe-ing-rows"></div>
+            </div>
+            <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);background:var(--surface);padding:6px 8px;">
+              <button class="btn btn-ghost btn-sm" onclick="addIngRow('slot-recipe-ing-rows')" style="padding:4px 10px;">+ Add ingredient</button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Notes / Instructions (optional)</label>
+            <textarea id="slot-recipe-notes" rows="4" placeholder="Step-by-step instructions…"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveAndAddRecipeFromSlot()">💾 Save & Add to Plan</button>
         </div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:8px;margin:16px 0 12px;">
-        <div style="flex:1;height:1px;background:var(--border);"></div>
-        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR PICK FROM SAVED</span>
-        <div style="flex:1;height:1px;background:var(--border);"></div>
+      <!-- ── PANEL: SELECT FROM EXISTING ── -->
+      <div class="slot-panel" id="slot-panel-existing">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" id="slot-search-input" placeholder="Search saved recipes…"
+            onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
+          <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
+        </div>
+        <div id="slot-results" style="margin-bottom:12px;"></div>
+        <div class="slot-section-label">Popular</div>
+        <div id="slot-popular-list" style="margin-bottom:14px;"></div>
+        <div style="display:flex;gap:2px;margin-bottom:10px;border-bottom:2px solid var(--border);">
+          <button class="slot-pick-tab active" id="spick-tab-mine" onclick="switchSlotPickTab('mine')"
+            style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
+            📝 My Recipes
+          </button>
+          <button class="slot-pick-tab" id="spick-tab-favs" onclick="switchSlotPickTab('favs')"
+            style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
+            ⭐ Favorites
+          </button>
+        </div>
+        <div id="slot-saved-list" style="max-height:220px;overflow-y:auto;"></div>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input type="text" id="slot-search-input" placeholder="Search saved recipes…"
-          onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
-        <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
-      </div>
-      <div id="slot-results" style="margin-bottom:8px;"></div>
-
-      <!-- Saved recipe picker tabs -->
-      <div style="display:flex;gap:2px;margin-bottom:10px;border-bottom:2px solid var(--border);">
-        <button class="slot-pick-tab active" id="spick-tab-mine" onclick="switchSlotPickTab('mine')"
-          style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
-          📝 My Recipes
-        </button>
-        <button class="slot-pick-tab" id="spick-tab-favs" onclick="switchSlotPickTab('favs')"
-          style="padding:6px 12px;border:none;background:none;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;">
-          ⭐ Favorites
-        </button>
-      </div>
-
-      <div id="slot-saved-list" style="max-height:180px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -1917,6 +2077,7 @@ function init() {
   // Init ingredient builders
   initIngBuilder('new-recipe-ing-rows');
   initIngBuilder('slot-ing-rows');
+  initIngBuilder('slot-recipe-ing-rows');
   // Start sync
   syncSetup();
   if (state.jsonbinId) pullFromCloud();
@@ -2309,22 +2470,36 @@ function renderSlotSavedList() {
   }).join('');
 }
 
+function showSlotPanel(panelId) {
+  document.querySelectorAll('.slot-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('slot-panel-' + panelId).classList.add('active');
+  const backBtn = document.getElementById('slot-back-btn');
+  backBtn.style.display = panelId === 'home' ? 'none' : 'flex';
+}
+
 function openSlotModal(day, meal) {
   state.currentSlot = { day, meal };
   document.getElementById('slot-modal-title').textContent =
     `${MEAL_EMOJIS[meal]} ${day} ${meal.charAt(0).toUpperCase() + meal.slice(1)}`;
-  document.getElementById('slot-search-input').value = '';
+
+  // Reset all panels to clean state
   document.getElementById('slot-manual-input').value = '';
+  document.getElementById('slot-save-recipe-checkbox').checked = false;
+  document.getElementById('slot-search-input').value = '';
   document.getElementById('slot-results').innerHTML = '';
-
-  // Reset ingredient builder (always start fresh — multiple recipes per slot)
+  document.getElementById('slot-recipe-name').value = '';
+  document.getElementById('slot-recipe-time').value = '';
+  document.getElementById('slot-recipe-servings').value = '';
+  document.getElementById('slot-recipe-url').value = '';
+  document.getElementById('slot-recipe-notes').value = '';
+  document.getElementById('slot-url-import-input').value = '';
+  document.getElementById('slot-url-import-status').innerHTML = '';
   initIngBuilder('slot-ing-rows');
+  initIngBuilder('slot-recipe-ing-rows');
+  initSlotPhotoImport();
 
-  // Render the saved recipe picker
-  renderSlotSavedList();
-
+  showSlotPanel('home');
   document.getElementById('slot-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('slot-manual-input').focus(), 50);
 }
 
 function addManualMeal() {
@@ -2345,9 +2520,71 @@ function addManualMeal() {
 function closeSlotModal(e, force) {
   if (force || e.target === document.getElementById('slot-overlay')) {
     document.getElementById('slot-overlay').classList.remove('open');
-    document.getElementById('slot-save-recipe-checkbox').checked = false;
+    showSlotPanel('home');
     state.currentSlot = null;
   }
+}
+
+function saveAndAddRecipeFromSlot() {
+  const name = document.getElementById('slot-recipe-name').value.trim();
+  if (!name) { toast('Recipe name is required', 'error'); return; }
+  const ingredients = collectIngRows('slot-recipe-ing-rows');
+  const defaultServings = Math.max(1, parseInt(document.getElementById('slot-recipe-servings').value) || 1);
+  const recipe = {
+    id: Date.now(),
+    name,
+    time: document.getElementById('slot-recipe-time').value.trim(),
+    url: document.getElementById('slot-recipe-url').value.trim(),
+    notes: document.getElementById('slot-recipe-notes').value.trim(),
+    ingredients,
+    defaultServings,
+    source: 'custom',
+    image: null,
+    createdAt: Date.now(),
+  };
+  state.customRecipes.unshift(recipe);
+  saveToStorage();
+  renderCustomRecipes();
+  toast('Recipe saved to My Recipes');
+  assignMealToSlot(recipe);
+}
+
+function renderSlotPopular() {
+  const container = document.getElementById('slot-popular-list');
+  // Count frequency of each recipe name across both weeks
+  const freq = {};
+  [0, 1].forEach(w => {
+    const plan = state.plans[w] || {};
+    Object.values(plan).forEach(slotVal => {
+      const meals = Array.isArray(slotVal) ? slotVal : (slotVal ? [slotVal] : []);
+      meals.forEach(m => {
+        if (m && m.name) freq[m.name] = (freq[m.name] || 0) + 1;
+      });
+    });
+  });
+  // Sort by frequency, take top 5
+  const top = Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name]) => name);
+
+  if (!top.length) {
+    container.innerHTML = `<div style="font-size:0.82rem;color:var(--text-muted);padding:8px 0;">No history yet — add some meals to see popular picks here.</div>`;
+    return;
+  }
+  // Find full recipe objects if available, else use name-only
+  const pool = [...state.customRecipes, ...state.favorites];
+  container.innerHTML = top.map(name => {
+    const r = pool.find(p => p.name === name);
+    const storeKey = `_slot_popular_${name.replace(/\W/g,'_')}`;
+    window[storeKey] = r || { name, ingredients: [], source: 'manual' };
+    const meta = r ? [r.time, r.ingredients?.length ? `${r.ingredients.length} ing.` : ''].filter(Boolean).join(' · ') : '';
+    return `<div class="slot-saved-item">
+      <div class="ssi-name" title="${escAttr(name)}">${escHtml(name)}</div>
+      ${meta ? `<div class="ssi-meta">${escHtml(meta)}</div>` : ''}
+      <button class="ssi-add" onclick="assignMealToSlot(window['${storeKey}'])">+ Add</button>
+    </div>`;
+  }).join('');
 }
 
 function slotSearch() {
@@ -4158,6 +4395,167 @@ async function createNewBin() {
   } finally {
     btn.disabled = false;
     btn.textContent = '+ New bin';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SLOT MODAL — PHOTO & URL IMPORT WRAPPERS
+// ══════════════════════════════════════════════════════════════════════
+
+let _slotPhotoFiles = [];
+
+function initSlotPhotoImport() {
+  _slotPhotoFiles = [];
+  const input = document.getElementById('slot-photo-file-input');
+  if (input) input.value = '';
+  renderSlotPhotoThumbnails();
+  const status = document.getElementById('slot-photo-import-status');
+  if (status) status.innerHTML = '';
+}
+
+function addSlotPhotoFiles(fileList) {
+  const status = document.getElementById('slot-photo-import-status');
+  for (const file of fileList) {
+    if (!file.type.startsWith('image/')) {
+      if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Only image files are supported.</span>`;
+      continue;
+    }
+    if (_slotPhotoFiles.length >= 3) {
+      if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Maximum 3 photos allowed.</span>`;
+      break;
+    }
+    _slotPhotoFiles.push(file);
+  }
+  const input = document.getElementById('slot-photo-file-input');
+  if (input) input.value = '';
+  renderSlotPhotoThumbnails();
+}
+
+function removeSlotPhoto(index) {
+  _slotPhotoFiles.splice(index, 1);
+  renderSlotPhotoThumbnails();
+}
+
+function renderSlotPhotoThumbnails() {
+  const container = document.getElementById('slot-photo-thumbnails');
+  const parseBtn  = document.getElementById('slot-photo-parse-btn');
+  const addBtn    = document.getElementById('slot-photo-add-btn');
+  const clearBtn  = document.getElementById('slot-photo-clear-btn');
+  const dropzone  = document.getElementById('slot-photo-dropzone');
+  if (!container) return;
+  const hasPhotos = _slotPhotoFiles.length > 0;
+  if (parseBtn) parseBtn.style.display = hasPhotos ? '' : 'none';
+  if (addBtn)   addBtn.style.display   = (hasPhotos && _slotPhotoFiles.length < 3) ? '' : 'none';
+  if (clearBtn) clearBtn.style.display = hasPhotos ? '' : 'none';
+  if (dropzone) dropzone.style.display = hasPhotos ? 'none' : '';
+  if (!hasPhotos) { container.innerHTML = ''; return; }
+  container.innerHTML = _slotPhotoFiles.map((file, i) => {
+    const url = URL.createObjectURL(file);
+    return `<div class="photo-thumb">
+      <img src="${url}" alt="Photo ${i+1}" onload="URL.revokeObjectURL(this.src)" />
+      <button class="photo-thumb-remove" onclick="removeSlotPhoto(${i})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Fills the slot modal recipe form fields from a parsed recipe object
+function _fillSlotRecipeForm(parsed, sourceUrl) {
+  const defaultServings = Math.max(1, parseInt(parsed.servings) || 1);
+  const normalizedIngredients = normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
+  document.getElementById('slot-recipe-name').value = parsed.name || '';
+  document.getElementById('slot-recipe-time').value = parsed.time || '';
+  document.getElementById('slot-recipe-url').value = sourceUrl || '';
+  document.getElementById('slot-recipe-servings').value = defaultServings > 1 ? defaultServings : '';
+  document.getElementById('slot-recipe-notes').value = parsed.notes || '';
+  initIngBuilder('slot-recipe-ing-rows');
+  populateIngBuilder('slot-recipe-ing-rows', normalizedIngredients);
+  return defaultServings;
+}
+
+async function parseSlotPhotosWithClaude() {
+  const status = document.getElementById('slot-photo-import-status');
+  if (!_slotPhotoFiles.length) {
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Please add at least one photo first.</span>`;
+    return;
+  }
+  if (!state.apiKey) {
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ An Anthropic API key is required. Add one in ⚙️ Settings.</span>`;
+    return;
+  }
+  const parseBtn = document.getElementById('slot-photo-parse-btn');
+  if (parseBtn) { parseBtn.disabled = true; parseBtn.textContent = 'Parsing…'; }
+  if (status) status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Reading recipe from photo…</span>`;
+  try {
+    const imageData = await Promise.all(_slotPhotoFiles.map(resizeImageToBase64));
+    const content = [
+      ...imageData.map(({ base64, mediaType }) => ({
+        type: 'image',
+        source: { type: 'base64', media_type: mediaType, data: base64 },
+      })),
+      { type: 'text', text: `Extract the recipe and return ONLY a JSON object (no markdown):\n{"name":"...","time":"...","servings":4,"ingredients":["1 cup flour",...],"notes":"Full step-by-step instructions."}\nList ingredients for the full recipe yield. "servings" = integer serving count.` },
+    ];
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content }] }),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `API error ${res.status}`); }
+    const aiData = await res.json();
+    const jsonMatch = aiData.content[0].text.trim().match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse recipe from the photo. Try a clearer image.');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.name) throw new Error('No recipe name found. Try a clearer image.');
+    const ds = _fillSlotRecipeForm(parsed, '');
+    const note = ds > 1 ? ` Ingredients divided to 1-serving amounts (recipe makes ${ds}).` : '';
+    if (status) status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe parsed!${note} Review and click Save &amp; Add to Plan.</span>`;
+    _slotPhotoFiles = [];
+    renderSlotPhotoThumbnails();
+  } catch(e) {
+    console.error(e);
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ ${escHtml(e.message)}</span>`;
+  } finally {
+    if (parseBtn) { parseBtn.disabled = false; parseBtn.textContent = '✨ Parse Recipe'; }
+  }
+}
+
+async function importFromUrlSlot() {
+  const url = document.getElementById('slot-url-import-input').value.trim();
+  const status = document.getElementById('slot-url-import-status');
+  if (!url) { toast('Please enter a URL', 'error'); return; }
+  if (!url.startsWith('http')) { toast('Please enter a valid URL starting with http', 'error'); return; }
+  if (!state.apiKey) {
+    status.innerHTML = `<span style="color:#dc2626;">⚠️ An Anthropic API key is required. Add one in ⚙️ Settings.</span>`;
+    return;
+  }
+  status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Fetching and parsing recipe…</span>`;
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Could not fetch the page. The site may block external requests.');
+    const data = await res.json();
+    const div = document.createElement('div');
+    div.innerHTML = data.contents || '';
+    div.querySelectorAll('script,style,nav,footer,header,aside').forEach(el => el.remove());
+    const snippet = (div.innerText || div.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 4000);
+    if (!snippet) throw new Error('Page appears empty or could not be read.');
+    const prompt = `Extract the recipe from this webpage text and return ONLY a JSON object (no markdown):\n{"name":"...","time":"...","servings":4,"ingredients":["1 cup flour",...],"notes":"Full step-by-step instructions.","url":"${url}"}\nList ingredients for the full recipe yield. "servings" = integer.\n\nWebpage text:\n${snippet}`;
+    const aiData = await callClaude(prompt, 3000);
+    const jsonMatch = aiData.content[0].text.trim().match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse recipe from page.');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.name) throw new Error('No recipe name found on page.');
+    const ds = _fillSlotRecipeForm(parsed, url);
+    document.getElementById('slot-url-import-input').value = '';
+    const note = ds > 1 ? ` Ingredients divided to 1-serving amounts (recipe makes ${ds}).` : '';
+    status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe imported!${note} Review and click Save &amp; Add to Plan.</span>`;
+  } catch(e) {
+    console.error(e);
+    status.innerHTML = `<span style="color:#dc2626;">⚠️ ${escHtml(e.message)}</span>`;
   }
 }
 
