@@ -3026,6 +3026,16 @@ async function fetchSections(token, projectId) {
   return Array.isArray(data) ? data : (data.results || data.items || []);
 }
 
+async function fetchExistingTaskNames(token, projectId) {
+  const path = projectId ? `/api/v1/tasks?project_id=${projectId}` : '/api/v1/tasks';
+  const res = await todoistFetch(token, path);
+  if (!res.ok) return new Set();
+  const data = await res.json();
+  const tasks = Array.isArray(data) ? data : (data.results || data.items || []);
+  // Normalise to lowercase base names for fuzzy matching
+  return new Set(tasks.map(t => ingredientBaseName(t.content).toLowerCase()));
+}
+
 async function exportToTodoist() {
   if (!state.todoistKey) {
     toast('Add your Todoist API token in ⚙️ Settings first', 'error');
@@ -3075,15 +3085,14 @@ async function exportToTodoist() {
     return;
   }
 
-  // Fetch sections if we have a project
-  let sections = [];
-  if (projectId) {
-    sections = await fetchSections(state.todoistKey, projectId);
-  }
-
-  toast(`Adding ${totalItems} items to Todoist…`, 'success');
+  // Fetch sections and existing tasks in parallel
+  const [sections, existingNames] = await Promise.all([
+    projectId ? fetchSections(state.todoistKey, projectId) : Promise.resolve([]),
+    fetchExistingTaskNames(state.todoistKey, projectId),
+  ]);
 
   let added = 0;
+  let skipped = 0;
   let failed = 0;
   const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
 
@@ -3093,6 +3102,11 @@ async function exportToTodoist() {
     const sectionId = sections.length ? matchSectionId(cat, sections) : null;
 
     for (const item of items) {
+      // Skip if an item with the same base name already exists in the project
+      if (existingNames.has(ingredientBaseName(item).toLowerCase())) {
+        skipped++;
+        continue;
+      }
       try {
         const body = { content: item };
         if (projectId) body.project_id = projectId;
@@ -3106,10 +3120,18 @@ async function exportToTodoist() {
     }
   }
 
+  const dest = projectId ? 'Groceries' : 'Inbox';
+  const withSections = sections.length ? ' with sections' : '';
   if (failed === 0) {
-    toast(`✅ ${added} items added to ${projectId ? 'Groceries' : 'Inbox'}${sections.length ? ' with sections' : ''}!`, 'success');
+    if (added === 0 && skipped > 0) {
+      toast(`All ${skipped} items already in ${dest} — nothing new to add.`, 'success');
+    } else if (skipped > 0) {
+      toast(`✅ ${added} added to ${dest}${withSections}, ${skipped} already there (skipped).`, 'success');
+    } else {
+      toast(`✅ ${added} items added to ${dest}${withSections}!`, 'success');
+    }
   } else {
-    toast(`Added ${added}, failed ${failed}. Check your token.`, 'error');
+    toast(`Added ${added}, skipped ${skipped}, failed ${failed}. Check your token.`, 'error');
   }
 }
 
