@@ -1060,6 +1060,24 @@
       </div>
     </div>
 
+    <!-- Todoist section -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:0.8rem;font-weight:700;">✅ Todoist</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">— export grocery list directly to Todoist</span>
+        <a href="https://app.todoist.com/app/settings/integrations/developer" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent-dark);text-decoration:none;margin-left:auto;">Get API token ↗</a>
+      </div>
+      <div class="settings-row">
+        <div class="form-group" style="flex:2;min-width:280px;">
+          <label>Todoist API Token <span style="font-weight:400;color:var(--text-muted);">(your own, private — never synced)</span></label>
+          <input type="password" id="settings-todoist-key" placeholder="Paste your API token…" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Sync section -->
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -1113,6 +1131,7 @@
         <div class="section-title">🛒 Grocery List</div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-secondary btn-sm" onclick="copyGroceryList()">📋 Copy list</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportToTodoist()">✅ Send to Todoist</button>
           <button class="btn btn-secondary btn-sm" onclick="uncheckAll()">↺ Uncheck all</button>
         </div>
       </div>
@@ -1354,6 +1373,8 @@ let state = {
   // Sync
   jsonbinId: '',
   lastSyncedAt: 0,
+  // Integrations
+  todoistKey: '',
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1387,6 +1408,7 @@ function loadFromStorage() {
     state.apiPromptShown = saved.apiPromptShown || false;
     state.jsonbinId = saved.jsonbinId || '';
     state.lastSyncedAt = saved.lastSyncedAt || 0;
+    state.todoistKey = saved.todoistKey || '';
   } catch(e) {}
 
   // Populate settings fields
@@ -1394,6 +1416,7 @@ function loadFromStorage() {
   document.getElementById('settings-edamam-id').value = state.edamamId;
   document.getElementById('settings-edamam-key').value = state.edamamKey;
   document.getElementById('settings-jsonbin-id').value = state.jsonbinId;
+  document.getElementById('settings-todoist-key').value = state.todoistKey;
 }
 
 function saveToStorage() {
@@ -1409,6 +1432,7 @@ function saveToStorage() {
     apiPromptShown: state.apiPromptShown,
     jsonbinId: state.jsonbinId,
     lastSyncedAt: state.lastSyncedAt,
+    todoistKey: state.todoistKey,
   }));
   // Trigger debounced cloud push if sync is configured
   schedulePush();
@@ -1455,6 +1479,7 @@ function saveSettings() {
   state.apiKey = document.getElementById('settings-api-key').value.trim();
   state.edamamId = document.getElementById('settings-edamam-id').value.trim();
   state.edamamKey = document.getElementById('settings-edamam-key').value.trim();
+  state.todoistKey = document.getElementById('settings-todoist-key').value.trim();
   const newBinId = document.getElementById('settings-jsonbin-id').value.trim();
   const syncChanged = newBinId !== state.jsonbinId;
   state.jsonbinId = newBinId;
@@ -1465,6 +1490,7 @@ function saveSettings() {
     apiKey: state.apiKey, edamamId: state.edamamId, edamamKey: state.edamamKey,
     apiPromptShown: state.apiPromptShown,
     jsonbinId: state.jsonbinId, lastSyncedAt: state.lastSyncedAt,
+    todoistKey: state.todoistKey,
   }));
   toast('Settings saved!', 'success');
   toggleSettings();
@@ -2107,6 +2133,94 @@ function copyGroceryList() {
   navigator.clipboard.writeText('GROCERY LIST\n' + items.join('\n'))
     .then(() => toast('Copied to clipboard!', 'success'))
     .catch(() => toast('Copy failed', 'error'));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  TODOIST EXPORT
+// ══════════════════════════════════════════════════════════════════════
+
+async function findGroceriesProject(token) {
+  const res = await fetch('https://api.todoist.com/rest/v2/projects', {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Todoist auth failed (HTTP ${res.status}) — check your API token`);
+  const projects = await res.json();
+  // Look for a project with "grocer" in the name (case-insensitive)
+  const match = projects.find(p => p.name.toLowerCase().includes('grocer'));
+  return match ? match.id : null;
+}
+
+async function exportToTodoist() {
+  if (!state.todoistKey) {
+    toast('Add your Todoist API token in ⚙️ Settings first', 'error');
+    toggleSettings();
+    return;
+  }
+
+  // Collect grocery items (same logic as copyGroceryList)
+  const ingMap = {};
+  Object.values(state.plan).forEach(meal => {
+    const servings = meal.servings || 1;
+    if (!meal.ingredients) return;
+    meal.ingredients.forEach(ing => {
+      if (!ing || !ing.trim()) return;
+      const scaled = scaleIngredient(ing.trim(), servings);
+      const base = ingredientBaseName(ing.trim());
+      const cat = categorizeIngredient(ing);
+      if (!ingMap[base]) ingMap[base] = { lines: [], cat };
+      ingMap[base].lines.push(scaled);
+    });
+  });
+
+  const allItems = [];
+  const orderedCats = ['produce','meat','dairy','grains','canned','frozen','other'];
+  const cats = {};
+  for (const [, data] of Object.entries(ingMap)) {
+    const text = data.lines.length === 1 ? data.lines[0] : tryMergeIngredients(data.lines);
+    if (!cats[data.cat]) cats[data.cat] = [];
+    cats[data.cat].push(text);
+  }
+  orderedCats.forEach(catKey => {
+    if (cats[catKey]) cats[catKey].forEach(t => allItems.push(t));
+  });
+
+  if (!allItems.length) { toast('Nothing to export — add meals with ingredients first', 'error'); return; }
+
+  toast(`Finding your Groceries project…`, 'success');
+
+  let projectId = null;
+  try {
+    projectId = await findGroceriesProject(state.todoistKey);
+  } catch(e) {
+    toast(e.message, 'error');
+    return;
+  }
+
+  toast(`Adding ${allItems.length} items to Todoist…`, 'success');
+
+  let added = 0;
+  let failed = 0;
+  for (const item of allItems) {
+    try {
+      const body = { content: item };
+      if (projectId) body.project_id = projectId;
+      const res = await fetch('https://api.todoist.com/rest/v2/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${state.todoistKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) { added++; } else { failed++; }
+    } catch(e) { failed++; }
+  }
+
+  if (failed === 0) {
+    toast(`✅ ${added} items added to ${projectId ? 'Groceries' : 'Inbox'}!`, 'success');
+  } else {
+    toast(`Added ${added}, failed ${failed}. Check your token.`, 'error');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
