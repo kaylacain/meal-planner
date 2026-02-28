@@ -1156,10 +1156,11 @@
       <button id="nav-recipes" onclick="switchView('recipes')">Recipes</button>
     </nav>
     <div class="header-actions">
-      <div id="sync-status" class="sync-status" title="Sync not configured" onclick="toggleSettings()">
+      <div id="sync-status" class="sync-status" title="Sync not configured">
         <span class="sync-dot"></span>
         <span class="sync-label" id="sync-label">Not synced</span>
       </div>
+      <button class="btn-icon" id="sync-now-btn" title="Sync now" onclick="manualSync()" style="display:none;">↻</button>
       <button class="btn-icon" title="Settings" onclick="toggleSettings()">⚙️</button>
     </div>
   </div>
@@ -3443,10 +3444,15 @@ function syncSetup() {
   // Clear any existing poll timer
   if (_pollTimer) clearInterval(_pollTimer);
 
+  const syncBtn = document.getElementById('sync-now-btn');
+
   if (!state.jsonbinId) {
     setSyncStatus('', 'Not configured');
+    if (syncBtn) syncBtn.style.display = 'none';
     return;
   }
+
+  if (syncBtn) syncBtn.style.display = '';
 
   setSyncStatus('syncing', 'Connecting…');
   // Poll every 30 seconds for remote changes
@@ -3455,6 +3461,18 @@ function syncSetup() {
   setInterval(() => {
     if (state.lastSyncedAt) setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
   }, 60000);
+}
+
+async function manualSync() {
+  if (!state.jsonbinId) {
+    toast('Set up a Sync ID in ⚙️ Settings first', 'error');
+    return;
+  }
+  const btn = document.getElementById('sync-now-btn');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+  await pullFromCloud();
+  await pushToCloud();
+  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
 }
 
 async function createNewBin() {
