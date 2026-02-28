@@ -20,6 +20,8 @@
     --breakfast-border: #c49a2a;
     --lunch: #b8d4b0;
     --lunch-border: #4e8c45;
+    --snacks: #d4c5f0;
+    --snacks-border: #7c52c8;
     --dinner: #e8b49a;
     --dinner-border: #b85a35;
     --shadow: 0 2px 8px rgba(60,40,20,0.08);
@@ -261,6 +263,7 @@
 
   .meal-slot.breakfast { background: var(--breakfast); }
   .meal-slot.lunch { background: var(--lunch); }
+  .meal-slot.snacks { background: var(--snacks); }
   .meal-slot.dinner { background: var(--dinner); }
 
   .meal-slot:hover { filter: brightness(0.96); }
@@ -1706,41 +1709,28 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════ COPY MEAL MODAL ═══════════════════════════════════════ -->
-<div id="copy-meal-overlay" class="overlay" onclick="closeCopyMealModal(event)">
-  <div class="modal" style="max-width:360px;">
+<!-- ═══════════════════════════════════════ DROP ACTION MODAL ═══════════════════════════════════════ -->
+<div id="drop-action-overlay" class="overlay" onclick="cancelDropAction(event)">
+  <div class="modal" style="max-width:340px;">
     <div class="modal-header">
       <div>
-        <div class="modal-title">Copy Meal To…</div>
-        <div id="copy-meal-name" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;"></div>
+        <div class="modal-title" id="drop-action-title">Move or Duplicate?</div>
+        <div id="drop-action-subtitle" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;"></div>
       </div>
-      <button class="close-btn" onclick="closeCopyMealModal(null, true)">✕</button>
+      <button class="close-btn" onclick="cancelDropAction(null, true)">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Day</label>
-        <select id="copy-meal-day">
-          <option value="0">Monday</option>
-          <option value="1">Tuesday</option>
-          <option value="2">Wednesday</option>
-          <option value="3">Thursday</option>
-          <option value="4">Friday</option>
-          <option value="5">Saturday</option>
-          <option value="6">Sunday</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Meal</label>
-        <select id="copy-meal-slot">
-          <option value="breakfast">Breakfast</option>
-          <option value="lunch">Lunch</option>
-          <option value="dinner">Dinner</option>
-        </select>
-      </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;padding-top:8px;">
+      <button class="btn btn-primary" style="justify-content:flex-start;gap:10px;padding:12px 16px;" onclick="confirmDropAction('move')">
+        <span style="font-size:1.1rem;">↗️</span>
+        <span><strong>Move</strong> — remove from original slot</span>
+      </button>
+      <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;padding:12px 16px;" onclick="confirmDropAction('duplicate')">
+        <span style="font-size:1.1rem;">📋</span>
+        <span><strong>Duplicate</strong> — keep in original slot too</span>
+      </button>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeCopyMealModal(null, true)">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmCopyMeal()">Copy</button>
+      <button class="btn btn-ghost" onclick="cancelDropAction(null, true)">Cancel</button>
     </div>
   </div>
 </div>
@@ -1757,13 +1747,13 @@
       <div class="form-group">
         <label>Day</label>
         <select id="addplan-day">
-          <option value="0">Monday</option>
-          <option value="1">Tuesday</option>
-          <option value="2">Wednesday</option>
-          <option value="3">Thursday</option>
-          <option value="4">Friday</option>
-          <option value="5">Saturday</option>
-          <option value="6">Sunday</option>
+          <option value="0">Saturday</option>
+          <option value="1">Sunday</option>
+          <option value="2">Monday</option>
+          <option value="3">Tuesday</option>
+          <option value="4">Wednesday</option>
+          <option value="5">Thursday</option>
+          <option value="6">Friday</option>
         </select>
       </div>
       <div class="form-group">
@@ -1771,6 +1761,7 @@
         <select id="addplan-meal">
           <option value="breakfast">Breakfast</option>
           <option value="lunch">Lunch</option>
+          <option value="snacks">Snacks</option>
           <option value="dinner">Dinner</option>
         </select>
       </div>
@@ -1849,9 +1840,9 @@
 //  STATE
 // ══════════════════════════════════════════════════════════════════════
 
-const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-const MEALS = ['breakfast','lunch','dinner'];
-const MEAL_EMOJIS = { breakfast: '☀️', lunch: '🌤', dinner: '🌙' };
+const DAYS = ['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'];
+const MEALS = ['breakfast','lunch','snacks','dinner'];
+const MEAL_EMOJIS = { breakfast: '☀️', lunch: '🌤', snacks: '🍎', dinner: '🌙' };
 
 const GROCERY_CATEGORIES = {
   produce: { label: 'Produce', emoji: '🥦', keywords: ['tomato','lettuce','spinach','kale','arugula','carrot','celery','onion','garlic','ginger','pepper','cucumber','zucchini','eggplant','broccoli','cauliflower','asparagus','mushroom','corn','pea','bean','lemon','lime','orange','apple','banana','berry','blueberry','strawberry','raspberry','avocado','mango','pineapple','grape','herbs','basil','parsley','cilantro','mint','dill','thyme','rosemary','sage','chive','scallion','leek','shallot','potato','sweet potato','yam','beet','radish','artichoke','cabbage','bok choy','fennel','squash','pumpkin','butternut','romaine','arugula','endive'] },
@@ -2029,25 +2020,28 @@ function saveSettings() {
 
 function updateWeekTitle() {
   const now = new Date();
-  const mon = getMonday(now);
-  mon.setDate(mon.getDate() + state.weekOffset * 7);
-  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+  const sat = getMonday(now); // returns the week-start Saturday
+  sat.setDate(sat.getDate() + state.weekOffset * 7);
+  const fri = new Date(sat); fri.setDate(fri.getDate() + 6);
   const opts = { month: 'short', day: 'numeric' };
   document.getElementById('week-subtitle').textContent =
-    `${mon.toLocaleDateString('en-US', opts)} – ${sun.toLocaleDateString('en-US', opts)}, ${sun.getFullYear()}`;
+    `${sat.toLocaleDateString('en-US', opts)} – ${fri.toLocaleDateString('en-US', opts)}, ${fri.getFullYear()}`;
 }
 
 function getMonday(d) {
+  // Returns the most recent Saturday (start of the week)
   const dt = new Date(d);
-  const day = dt.getDay();
-  const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+  const day = dt.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const diff = dt.getDate() - ((day + 1) % 7); // days back to Saturday
   dt.setDate(diff);
   return dt;
 }
 
 function getTodayDayIndex() {
-  const day = new Date().getDay();
-  return day === 0 ? 6 : day - 1; // 0=Mon, 6=Sun
+  // JS getDay(): 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  // DAYS order:  Sat=0,Sun=1,Mon=2,Tue=3,Wed=4,Thu=5,Fri=6
+  const map = [1, 2, 3, 4, 5, 6, 0]; // map JS day → DAYS index
+  return map[new Date().getDay()];
 }
 
 function renderWeekGrid() {
@@ -2091,7 +2085,6 @@ function renderWeekGrid() {
               <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
             </div>
             <div class="meal-actions">
-              <button onclick="openCopyMealModal('${key}',${idx})" title="Copy to another day">📋</button>
               <button onclick="removeMeal('${key}',${idx})" title="Remove">✕</button>
             </div>
           </div>`;
@@ -2124,32 +2117,29 @@ function removeMeal(key, idx) {
 }
 
 // ── Drag and drop ─────────────────────────────────────────────────────
-let _dragSource = null; // { key, idx }
+let _dragSource = null;    // { key, idx } — set on dragstart
+let _dropPending = null;   // { srcKey, srcIdx, targetKey } — set on drop, cleared after modal choice
 
 function onCardDragStart(event, key, idx) {
   _dragSource = { key, idx };
-  event.dataTransfer.effectAllowed = 'move';
-  // Store as text so it works cross-browser
+  event.dataTransfer.effectAllowed = 'copyMove';
   event.dataTransfer.setData('text/plain', JSON.stringify({ key, idx }));
-  // Fade the card being dragged
   setTimeout(() => event.target.classList.add('dragging'), 0);
 }
 
 function onCardDragEnd(event) {
   event.target.classList.remove('dragging');
-  // Clear any lingering drop highlights
   document.querySelectorAll('.meal-slot.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
 
 function onSlotDragOver(event) {
   event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
+  event.dataTransfer.dropEffect = 'copyMove';
   const slot = event.currentTarget;
   if (!slot.classList.contains('drag-over')) slot.classList.add('drag-over');
 }
 
 function onSlotDragLeave(event) {
-  // Only remove highlight when leaving the slot cell itself, not a child element
   if (!event.currentTarget.contains(event.relatedTarget)) {
     event.currentTarget.classList.remove('drag-over');
   }
@@ -2169,67 +2159,45 @@ function onSlotDrop(event, targetKey) {
   const srcSlots = state.plan[srcKey];
   if (!srcSlots || !srcSlots[srcIdx]) return;
 
-  // Move: deep-copy to target, remove from source
-  const moved = JSON.parse(JSON.stringify(srcSlots[srcIdx]));
-  if (!state.plan[targetKey]) state.plan[targetKey] = [];
-  state.plan[targetKey].push(moved);
+  // Store pending drop and show Move/Duplicate prompt
+  _dropPending = { srcKey, srcIdx, targetKey };
 
-  srcSlots.splice(srcIdx, 1);
-  if (!srcSlots.length) delete state.plan[srcKey];
-
-  saveToStorage();
-  renderWeekGrid();
-  renderGroceryList();
-  toast(`Moved to ${targetKey.replace('-', ' ')}`, 'success');
+  const slot = srcSlots[srcIdx];
+  const targetLabel = targetKey.replace('-', ' ');
+  document.getElementById('drop-action-subtitle').textContent =
+    `"${slot.name}" → ${targetLabel}`;
+  document.getElementById('drop-action-overlay').classList.add('open');
 }
 
-// ── Copy meal to another slot ──────────────────────────────────────────
-let _copyMealSource = null; // { key, idx }
-
-function openCopyMealModal(key, idx) {
-  _copyMealSource = { key, idx };
-  const slots = state.plan[key];
-  const slot = Array.isArray(slots) ? slots[idx] : slots;
-  document.getElementById('copy-meal-name').textContent = slot ? slot.name : '';
-  // Pre-select today / same meal type as source
-  const dashIdx = key.indexOf('-');
-  const sourceMeal = key.slice(dashIdx + 1);
-  const todayIdx = getTodayDayIndex();
-  document.getElementById('copy-meal-day').value = todayIdx >= 0 ? todayIdx : 0;
-  document.getElementById('copy-meal-slot').value = sourceMeal;
-  document.getElementById('copy-meal-overlay').classList.add('open');
-}
-
-function closeCopyMealModal(e, force) {
-  if (force || (e && e.target === document.getElementById('copy-meal-overlay'))) {
-    document.getElementById('copy-meal-overlay').classList.remove('open');
-    _copyMealSource = null;
+function cancelDropAction(e, force) {
+  if (force || (e && e.target === document.getElementById('drop-action-overlay'))) {
+    document.getElementById('drop-action-overlay').classList.remove('open');
+    _dropPending = null;
   }
 }
 
-function confirmCopyMeal() {
-  if (!_copyMealSource) return;
-  const { key, idx } = _copyMealSource;
-  const slots = state.plan[key];
-  const slot = Array.isArray(slots) ? slots[idx] : slots;
-  if (!slot) return;
+function confirmDropAction(mode) {
+  if (!_dropPending) return;
+  const { srcKey, srcIdx, targetKey } = _dropPending;
+  _dropPending = null;
+  document.getElementById('drop-action-overlay').classList.remove('open');
 
-  const dayIdx = parseInt(document.getElementById('copy-meal-day').value);
-  const meal = document.getElementById('copy-meal-slot').value;
-  const targetKey = `${DAYS[dayIdx]}-${meal}`;
+  const srcSlots = state.plan[srcKey];
+  if (!srcSlots || !srcSlots[srcIdx]) return;
 
-  // Deep-copy the recipe including checked grocery ingredients
-  const copy = JSON.parse(JSON.stringify(slot));
-
+  const copy = JSON.parse(JSON.stringify(srcSlots[srcIdx]));
   if (!state.plan[targetKey]) state.plan[targetKey] = [];
   state.plan[targetKey].push(copy);
 
-  state.groceryChecked = {};
+  if (mode === 'move') {
+    srcSlots.splice(srcIdx, 1);
+    if (!srcSlots.length) delete state.plan[srcKey];
+  }
+
   saveToStorage();
   renderWeekGrid();
   renderGroceryList();
-  closeCopyMealModal(null, true);
-  toast(`Copied to ${DAYS[dayIdx]} ${meal}!`, 'success');
+  toast(mode === 'move' ? `Moved to ${targetKey.replace('-', ' ')}!` : `Duplicated to ${targetKey.replace('-', ' ')}!`, 'success');
 }
 
 function changeServings(key, idx, delta) {
