@@ -1366,8 +1366,8 @@
   }
 
   .ing-check-item.checked span {
-    text-decoration: line-through;
-    color: var(--text-muted);
+    color: var(--text);
+    font-weight: 700;
   }
 
   .ing-check-controls {
@@ -2044,9 +2044,7 @@ function renderWeekGrid() {
               <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
             </div>
             <div class="meal-actions">
-              <button onclick="openRecipeDetail('${key}',${idx})" title="View recipe">👁</button>
               <button onclick="removeMeal('${key}',${idx})" title="Remove">✕</button>
-              ${!isFavorite(slot.name) ? `<button onclick="saveFavoriteFromSlot('${key}',${idx})" title="Save">⭐</button>` : ''}
             </div>
           </div>`;
         });
@@ -2420,24 +2418,16 @@ function _renderRecipeDetailBody(slot, servings) {
   if (!notes) {
     notesHtml += `<p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">No instructions saved. ${slot.url ? 'See the original recipe link below.' : 'Import a recipe via URL to get full instructions.'}</p>`;
   } else {
-    // Detect numbered steps: lines starting with "1." or "Step 1"
+    // Split into steps and always render as a numbered list
     const lines = notes.trim().split(/\n+/);
-    const isNumbered = lines.some(l => /^\d+[\.\)]/.test(l.trim()) || /^step\s+\d+/i.test(l.trim()));
-
-    if (isNumbered) {
-      // Render as ordered list
-      const steps = lines.filter(l => l.trim());
-      notesHtml += `<ol style="padding-left:20px;margin:0;">`;
-      steps.forEach(step => {
-        // Strip leading "1." or "Step 1:" prefix for the <li> content
-        const cleaned = step.trim().replace(/^(\d+[\.\)]\s*|step\s+\d+[:\.\)]\s*)/i, '');
-        notesHtml += `<li style="font-size:0.875rem;line-height:1.7;margin-bottom:10px;color:var(--text);">${escHtml(cleaned)}</li>`;
-      });
-      notesHtml += `</ol>`;
-    } else {
-      // Plain paragraph / preserve whitespace
-      notesHtml += `<div class="recipe-detail-instructions">${escHtml(notes)}</div>`;
-    }
+    const steps = lines
+      .map(l => l.trim().replace(/^(\d+[\.\)]\s*|step\s+\d+[:\.\)]\s*)/i, '').trim())
+      .filter(l => l.length > 0);
+    notesHtml += `<ol style="padding-left:20px;margin:0;">`;
+    steps.forEach(step => {
+      notesHtml += `<li style="font-size:0.875rem;line-height:1.7;margin-bottom:14px;color:var(--text);">${escHtml(step)}</li>`;
+    });
+    notesHtml += `</ol>`;
   }
   notesHtml += `</div>`;
 
@@ -2549,8 +2539,8 @@ function formatQuantity(n) {
 function scaleIngredient(ingredient, multiplier) {
   if (multiplier === 1) return ingredient;
   // Regex: optional leading number+fraction, then unit, then rest
-  // Matches: "2 cups", "1 1/2 tbsp", "¾ tsp", "3 large eggs", plain "salt"
-  const re = /^([\d\s\u00BC-\u00BE\u2150-\u215E\/]+)\s*(.*)/;
+  // Matches: "2 cups", "1 1/2 tbsp", "¾ tsp", ".375 lb", "0.5 cup", "3 large eggs", plain "salt"
+  const re = /^([\d\s\u00BC-\u00BE\u2150-\u215E\/.]+)\s*(.*)/;
   const match = ingredient.match(re);
   if (!match) return ingredient; // no leading number, return as-is
 
@@ -2613,7 +2603,7 @@ function categorizeIngredient(ingredient) {
 
 // Get the base ingredient name (strip leading quantity+unit) for deduplication
 function ingredientBaseName(ing) {
-  const re = /^[\d\s\u00BC-\u00BE\u2150-\u215E\/]+\s*(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|oz|ounces?|lbs?|pounds?|g|kg|ml|liters?|litres?|cloves?|slices?|pieces?|cans?|packages?|pkgs?|bunches?|heads?|stalks?|strips?|fillets?|sheets?)?\s*/i;
+  const re = /^[\d\s\u00BC-\u00BE\u2150-\u215E\/.]+\s*(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|oz|ounces?|lbs?|pounds?|g|kg|ml|liters?|litres?|cloves?|slices?|pieces?|cans?|packages?|pkgs?|bunches?|heads?|stalks?|strips?|fillets?|sheets?)?\s*/i;
   return ing.replace(re, '').toLowerCase().trim();
 }
 
