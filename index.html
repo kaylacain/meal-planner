@@ -3455,8 +3455,8 @@ function syncSetup() {
   if (syncBtn) syncBtn.style.display = '';
 
   setSyncStatus('syncing', 'Connecting…');
-  // Poll every 30 seconds for remote changes
-  _pollTimer = setInterval(pullFromCloud, 30000);
+  // Poll every 10 seconds for remote changes
+  _pollTimer = setInterval(pullFromCloud, 10000);
   // Update the relative time label every minute
   setInterval(() => {
     if (state.lastSyncedAt) setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
