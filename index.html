@@ -334,10 +334,11 @@
     margin-bottom: 0;
   }
   .add-more-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     margin-top: 4px;
+    align-self: center;
     width: 18px; height: 18px;
     font-size: 0.75rem;
     font-weight: 700;
@@ -1714,6 +1715,13 @@
         <div style="flex:1;height:1px;background:var(--border);"></div>
       </div>
 
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="slot-search-input" placeholder="Search saved recipes…"
+          onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
+        <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
+      </div>
+      <div id="slot-results" style="margin-bottom:8px;"></div>
+
       <!-- Saved recipe picker tabs -->
       <div style="display:flex;gap:2px;margin-bottom:10px;border-bottom:2px solid var(--border);">
         <button class="slot-pick-tab active" id="spick-tab-mine" onclick="switchSlotPickTab('mine')"
@@ -1726,20 +1734,7 @@
         </button>
       </div>
 
-      <div id="slot-saved-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px;"></div>
-
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <div style="flex:1;height:1px;background:var(--border);"></div>
-        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR SEARCH</span>
-        <div style="flex:1;height:1px;background:var(--border);"></div>
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <input type="text" id="slot-search-input" placeholder="Search saved recipes…"
-          onkeydown="if(event.key==='Enter') slotSearch()" style="flex:1;" />
-        <button class="btn btn-secondary" onclick="slotSearch()">Search</button>
-      </div>
-      <div id="slot-results"></div>
+      <div id="slot-saved-list" style="max-height:180px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
