@@ -247,11 +247,16 @@
   .meal-slot {
     min-height: 90px;
     cursor: default;
-    transition: background 0.12s;
+    transition: background 0.12s, outline 0.1s;
     position: relative;
     padding: 4px;
     display: flex;
     flex-direction: column;
+  }
+  .meal-slot.drag-over {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+    filter: brightness(0.93);
   }
 
   .meal-slot.breakfast { background: var(--breakfast); }
@@ -292,7 +297,10 @@
     flex-direction: column;
     border-bottom: 1px solid rgba(0,0,0,0.07);
     margin-bottom: 4px;
+    cursor: grab;
   }
+  .meal-card-mini:active { cursor: grabbing; }
+  .meal-card-mini.dragging { opacity: 0.4; }
   .meal-card-mini:last-of-type {
     border-bottom: none;
     margin-bottom: 0;
@@ -1698,6 +1706,45 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════ COPY MEAL MODAL ═══════════════════════════════════════ -->
+<div id="copy-meal-overlay" class="overlay" onclick="closeCopyMealModal(event)">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Copy Meal To…</div>
+        <div id="copy-meal-name" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;"></div>
+      </div>
+      <button class="close-btn" onclick="closeCopyMealModal(null, true)">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Day</label>
+        <select id="copy-meal-day">
+          <option value="0">Monday</option>
+          <option value="1">Tuesday</option>
+          <option value="2">Wednesday</option>
+          <option value="3">Thursday</option>
+          <option value="4">Friday</option>
+          <option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Meal</label>
+        <select id="copy-meal-slot">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCopyMealModal(null, true)">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCopyMeal()">Copy</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════ ADD TO PLAN MODAL ═══════════════════════════════════════ -->
 <div id="addplan-overlay" class="overlay" onclick="closeAddPlanModal(event)">
   <div class="modal" style="max-width:360px;">
@@ -2031,10 +2078,10 @@ function renderWeekGrid() {
       const key = `${day}-${meal}`;
       const slots = state.plan[key]; // now an array
       if (slots && slots.length) {
-        html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}">`;
+        html += `<div class="grid-cell meal-slot ${meal}" data-key="${key}" ondragover="onSlotDragOver(event)" ondragleave="onSlotDragLeave(event)" ondrop="onSlotDrop(event,'${key}')">`;
         slots.forEach((slot, idx) => {
           const servings = slot.servings || 1;
-          html += `<div class="meal-card-mini">
+          html += `<div class="meal-card-mini" draggable="true" ondragstart="onCardDragStart(event,'${key}',${idx})" ondragend="onCardDragEnd(event)">
             <div class="meal-name meal-name-clickable" onclick="openRecipeDetail('${key}',${idx})" title="View recipe">${escHtml(slot.name)}</div>
             ${slot.source === 'ai' ? '<div class="ai-generated-badge">✨ AI</div>' : ''}
             <div class="servings-control">
@@ -2044,6 +2091,7 @@ function renderWeekGrid() {
               <span class="servings-label">serving${servings !== 1 ? 's' : ''}</span>
             </div>
             <div class="meal-actions">
+              <button onclick="openCopyMealModal('${key}',${idx})" title="Copy to another day">📋</button>
               <button onclick="removeMeal('${key}',${idx})" title="Remove">✕</button>
             </div>
           </div>`;
@@ -2051,7 +2099,7 @@ function renderWeekGrid() {
         html += `<button class="add-more-btn" onclick="openSlotModal('${day}','${meal}')" title="Add another recipe">+ Add recipe</button>`;
         html += `</div>`;
       } else {
-        html += `<div class="grid-cell meal-slot ${meal} empty" data-key="${key}" onclick="openSlotModal('${day}','${meal}')">
+        html += `<div class="grid-cell meal-slot ${meal} empty" data-key="${key}" onclick="openSlotModal('${day}','${meal}')" ondragover="onSlotDragOver(event)" ondragleave="onSlotDragLeave(event)" ondrop="onSlotDrop(event,'${key}')">
           <button class="add-btn">+</button>
         </div>`;
       }
@@ -2073,6 +2121,115 @@ function removeMeal(key, idx) {
   renderWeekGrid();
   renderGroceryList();
   toast('Meal removed');
+}
+
+// ── Drag and drop ─────────────────────────────────────────────────────
+let _dragSource = null; // { key, idx }
+
+function onCardDragStart(event, key, idx) {
+  _dragSource = { key, idx };
+  event.dataTransfer.effectAllowed = 'move';
+  // Store as text so it works cross-browser
+  event.dataTransfer.setData('text/plain', JSON.stringify({ key, idx }));
+  // Fade the card being dragged
+  setTimeout(() => event.target.classList.add('dragging'), 0);
+}
+
+function onCardDragEnd(event) {
+  event.target.classList.remove('dragging');
+  // Clear any lingering drop highlights
+  document.querySelectorAll('.meal-slot.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function onSlotDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  const slot = event.currentTarget;
+  if (!slot.classList.contains('drag-over')) slot.classList.add('drag-over');
+}
+
+function onSlotDragLeave(event) {
+  // Only remove highlight when leaving the slot cell itself, not a child element
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    event.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function onSlotDrop(event, targetKey) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+
+  if (!_dragSource) return;
+  const { key: srcKey, idx: srcIdx } = _dragSource;
+  _dragSource = null;
+
+  // No-op if dropped onto same slot
+  if (srcKey === targetKey) return;
+
+  const srcSlots = state.plan[srcKey];
+  if (!srcSlots || !srcSlots[srcIdx]) return;
+
+  // Move: deep-copy to target, remove from source
+  const moved = JSON.parse(JSON.stringify(srcSlots[srcIdx]));
+  if (!state.plan[targetKey]) state.plan[targetKey] = [];
+  state.plan[targetKey].push(moved);
+
+  srcSlots.splice(srcIdx, 1);
+  if (!srcSlots.length) delete state.plan[srcKey];
+
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  toast(`Moved to ${targetKey.replace('-', ' ')}`, 'success');
+}
+
+// ── Copy meal to another slot ──────────────────────────────────────────
+let _copyMealSource = null; // { key, idx }
+
+function openCopyMealModal(key, idx) {
+  _copyMealSource = { key, idx };
+  const slots = state.plan[key];
+  const slot = Array.isArray(slots) ? slots[idx] : slots;
+  document.getElementById('copy-meal-name').textContent = slot ? slot.name : '';
+  // Pre-select today / same meal type as source
+  const dashIdx = key.indexOf('-');
+  const sourceMeal = key.slice(dashIdx + 1);
+  const todayIdx = getTodayDayIndex();
+  document.getElementById('copy-meal-day').value = todayIdx >= 0 ? todayIdx : 0;
+  document.getElementById('copy-meal-slot').value = sourceMeal;
+  document.getElementById('copy-meal-overlay').classList.add('open');
+}
+
+function closeCopyMealModal(e, force) {
+  if (force || (e && e.target === document.getElementById('copy-meal-overlay'))) {
+    document.getElementById('copy-meal-overlay').classList.remove('open');
+    _copyMealSource = null;
+  }
+}
+
+function confirmCopyMeal() {
+  if (!_copyMealSource) return;
+  const { key, idx } = _copyMealSource;
+  const slots = state.plan[key];
+  const slot = Array.isArray(slots) ? slots[idx] : slots;
+  if (!slot) return;
+
+  const dayIdx = parseInt(document.getElementById('copy-meal-day').value);
+  const meal = document.getElementById('copy-meal-slot').value;
+  const targetKey = `${DAYS[dayIdx]}-${meal}`;
+
+  // Deep-copy the recipe including checked grocery ingredients
+  const copy = JSON.parse(JSON.stringify(slot));
+
+  if (!state.plan[targetKey]) state.plan[targetKey] = [];
+  state.plan[targetKey].push(copy);
+
+  state.groceryChecked = {};
+  saveToStorage();
+  renderWeekGrid();
+  renderGroceryList();
+  closeCopyMealModal(null, true);
+  toast(`Copied to ${DAYS[dayIdx]} ${meal}!`, 'success');
 }
 
 function changeServings(key, idx, delta) {
