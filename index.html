@@ -1701,7 +1701,7 @@
 
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
         <div style="flex:1;height:1px;background:var(--border);"></div>
-        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR SEARCH / AI</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">OR SEARCH</span>
         <div style="flex:1;height:1px;background:var(--border);"></div>
       </div>
 
@@ -2095,7 +2095,7 @@ function renderWeekGrid() {
             </div>
           </div>`;
         });
-        html += `<button class="add-more-btn" onclick="openSlotModal('${day}','${meal}')" title="Add another recipe">+ Add recipe</button>`;
+        html += `<button class="add-more-btn" onclick="openSlotModal('${day}','${meal}')" title="Add another recipe">+</button>`;
         html += `</div>`;
       } else {
         html += `<div class="grid-cell meal-slot ${meal} empty" data-key="${key}" onclick="openSlotModal('${day}','${meal}')" ondragover="onSlotDragOver(event)" ondragleave="onSlotDragLeave(event)" ondrop="onSlotDrop(event,'${key}')">
