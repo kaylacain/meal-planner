@@ -1692,6 +1692,10 @@
             onkeydown="if(event.key==='Enter') addManualMeal()" style="flex:1;" />
           <button class="btn btn-primary" onclick="addManualMeal()">+ Add</button>
         </div>
+        <label style="display:inline-flex;align-items:center;gap:7px;font-size:0.8rem;color:var(--text-muted);cursor:pointer;margin-bottom:4px;">
+          <input type="checkbox" id="slot-save-recipe-checkbox" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;" />
+          Save as a new recipe
+        </label>
         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:5px;">Ingredients per 1 serving (optional)</label>
         <div class="ing-builder">
           <div class="ing-builder-header">
@@ -2332,13 +2336,21 @@ function addManualMeal() {
   const name = document.getElementById('slot-manual-input').value.trim();
   if (!name) { toast('Please enter a meal name', 'error'); return; }
   const ingredients = collectIngRows('slot-ing-rows');
+  const saveAsRecipe = document.getElementById('slot-save-recipe-checkbox').checked;
   const recipe = { name, ingredients, time: '', url: '', source: 'manual', image: null };
+  if (saveAsRecipe) {
+    const newRecipe = { ...recipe, id: Date.now(), defaultServings: 2 };
+    state.customRecipes.unshift(newRecipe);
+    saveToStorage();
+    toast('Recipe saved to My Recipes');
+  }
   assignMealToSlot(recipe);
 }
 
 function closeSlotModal(e, force) {
   if (force || e.target === document.getElementById('slot-overlay')) {
     document.getElementById('slot-overlay').classList.remove('open');
+    document.getElementById('slot-save-recipe-checkbox').checked = false;
     state.currentSlot = null;
   }
 }
