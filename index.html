@@ -376,6 +376,65 @@
   .slot-saved-item .ssi-add:hover { background: var(--accent-dark); }
 
   /* ── INGREDIENT BUILDER ── */
+  /* ── Photo import ─────────────────────────────────── */
+  .photo-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--surface2);
+    user-select: none;
+  }
+  .photo-dropzone:hover, .photo-dropzone:active {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .photo-dropzone-icon { font-size: 2rem; margin-bottom: 6px; }
+  .photo-dropzone-text { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .photo-dropzone-sub  { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+
+  .photo-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .photo-thumb {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .photo-thumb-remove {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  /* ── end photo import ─────────────────────────────── */
+
   .ing-builder {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -1171,6 +1230,30 @@
 
     <!-- MY RECIPES TAB -->
     <div id="rtab-content-mine" style="display:none;">
+
+      <!-- Photo Import -->
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
+        <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:6px;">📷 Import from Photo</h3>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">Take a photo of a cookbook recipe (up to 3 pages). Requires an Anthropic API key.</p>
+        <!-- Hidden file input -->
+        <input type="file" id="photo-file-input" accept="image/*" style="display:none;" onchange="addPhotoFiles(this.files)" />
+        <!-- Drop / tap zone -->
+        <div id="photo-dropzone" class="photo-dropzone" onclick="document.getElementById('photo-file-input').click()">
+          <div class="photo-dropzone-icon">📷</div>
+          <div class="photo-dropzone-text">Tap to take a photo or choose from library</div>
+          <div class="photo-dropzone-sub">JPEG, PNG, HEIC — up to 3 photos</div>
+        </div>
+        <!-- Thumbnails -->
+        <div id="photo-thumbnails" class="photo-thumbnails"></div>
+        <!-- Actions -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="photo-parse-btn" onclick="parsePhotosWithClaude()" style="display:none;">✨ Parse Recipe</button>
+          <button class="btn btn-secondary btn-sm" id="photo-add-btn" onclick="document.getElementById('photo-file-input').click()" style="display:none;">+ Add another photo</button>
+          <button class="btn btn-ghost btn-sm" id="photo-clear-btn" onclick="initPhotoImport()" style="display:none;">✕ Clear all</button>
+        </div>
+        <div id="photo-import-status" style="margin-top:10px;font-size:0.82rem;color:var(--text-muted);"></div>
+      </div>
+
       <!-- URL Import -->
       <div style="background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
         <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:12px;">🔗 Import from URL</h3>
@@ -1467,7 +1550,7 @@ function switchRecipeTab(tab) {
     document.getElementById('rtab-' + t).classList.toggle('active', t === tab);
     document.getElementById('rtab-content-' + t).style.display = t === tab ? '' : 'none';
   });
-  if (tab === 'mine') renderCustomRecipes();
+  if (tab === 'mine') { renderCustomRecipes(); initPhotoImport(); }
 }
 
 function toggleSettings() {
@@ -2721,6 +2804,190 @@ function renderCustomRecipes() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  PHOTO RECIPE IMPORT
+// ══════════════════════════════════════════════════════════════════════
+
+let _photoFiles = [];
+
+function initPhotoImport() {
+  _photoFiles = [];
+  const input = document.getElementById('photo-file-input');
+  if (input) input.value = '';
+  renderPhotoThumbnails();
+  const status = document.getElementById('photo-import-status');
+  if (status) status.innerHTML = '';
+}
+
+function addPhotoFiles(fileList) {
+  const status = document.getElementById('photo-import-status');
+  for (const file of fileList) {
+    if (!file.type.startsWith('image/')) {
+      if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Only image files are supported.</span>`;
+      continue;
+    }
+    if (_photoFiles.length >= 3) {
+      if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Maximum 3 photos allowed.</span>`;
+      break;
+    }
+    _photoFiles.push(file);
+  }
+  // Reset input so same file can be re-selected if needed
+  const input = document.getElementById('photo-file-input');
+  if (input) input.value = '';
+  renderPhotoThumbnails();
+}
+
+function removePhoto(index) {
+  _photoFiles.splice(index, 1);
+  renderPhotoThumbnails();
+}
+
+function renderPhotoThumbnails() {
+  const container = document.getElementById('photo-thumbnails');
+  const parseBtn  = document.getElementById('photo-parse-btn');
+  const addBtn    = document.getElementById('photo-add-btn');
+  const clearBtn  = document.getElementById('photo-clear-btn');
+  const dropzone  = document.getElementById('photo-dropzone');
+  if (!container) return;
+
+  const hasPhotos = _photoFiles.length > 0;
+
+  // Show/hide buttons
+  if (parseBtn) parseBtn.style.display = hasPhotos ? '' : 'none';
+  if (addBtn)   addBtn.style.display   = (hasPhotos && _photoFiles.length < 3) ? '' : 'none';
+  if (clearBtn) clearBtn.style.display = hasPhotos ? '' : 'none';
+  if (dropzone) dropzone.style.display = hasPhotos ? 'none' : '';
+
+  if (!hasPhotos) { container.innerHTML = ''; return; }
+
+  container.innerHTML = _photoFiles.map((file, i) => {
+    const url = URL.createObjectURL(file);
+    return `<div class="photo-thumb">
+      <img src="${url}" alt="Recipe photo ${i+1}" onload="URL.revokeObjectURL(this.src)" />
+      <button class="photo-thumb-remove" onclick="removePhoto(${i})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function resizeImageToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const MAX = 1600;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const base64 = dataUrl.split(',')[1];
+        resolve({ base64, mediaType: 'image/jpeg' });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function parsePhotosWithClaude() {
+  const status = document.getElementById('photo-import-status');
+  if (!_photoFiles.length) {
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ Please add at least one photo first.</span>`;
+    return;
+  }
+  if (!state.apiKey) {
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ An Anthropic API key is required. Add one in ⚙️ Settings.</span>`;
+    return;
+  }
+
+  const parseBtn = document.getElementById('photo-parse-btn');
+  if (parseBtn) { parseBtn.disabled = true; parseBtn.textContent = 'Parsing…'; }
+  if (status) status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Reading recipe from photo${_photoFiles.length > 1 ? 's' : ''}…</span>`;
+
+  try {
+    // Resize all photos and convert to base64
+    const imageData = await Promise.all(_photoFiles.map(resizeImageToBase64));
+
+    // Build content array: image blocks + text prompt
+    const content = [
+      ...imageData.map(({ base64, mediaType }) => ({
+        type: 'image',
+        source: { type: 'base64', media_type: mediaType, data: base64 },
+      })),
+      {
+        type: 'text',
+        text: `Look at this recipe from a cookbook. Extract all recipe details and return ONLY a JSON object (no markdown, no explanation):
+{
+  "name": "Recipe name",
+  "time": "total prep + cook time",
+  "ingredients": ["1 cup flour", "2 eggs", ...],
+  "notes": "Key instructions summarized in 3-5 sentences"
+}
+If multiple pages are shown, combine them into one recipe. List every ingredient you can see.`,
+      },
+    ];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+
+    const aiData = await res.json();
+    const aiText = aiData.content[0].text.trim();
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse recipe from the photo. Try a clearer image.');
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.name) throw new Error('No recipe name found. Try a clearer image.');
+
+    // Pre-fill the recipe form (same as importFromUrl)
+    document.getElementById('new-recipe-name').value = parsed.name || '';
+    document.getElementById('new-recipe-time').value = parsed.time || '';
+    document.getElementById('new-recipe-url').value = '';
+    document.getElementById('new-recipe-notes').value = parsed.notes || '';
+    initIngBuilder('new-recipe-ing-rows');
+    populateIngBuilder('new-recipe-ing-rows', parsed.ingredients || []);
+
+    if (status) status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe parsed! Review the details below and click Save.</span>`;
+
+    // Clear photos
+    _photoFiles = [];
+    renderPhotoThumbnails();
+
+    // Scroll to form
+    document.getElementById('new-recipe-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('new-recipe-name').focus();
+
+  } catch(e) {
+    console.error(e);
+    if (status) status.innerHTML = `<span style="color:#dc2626;">⚠️ ${escHtml(e.message)}</span>`;
+  } finally {
+    if (parseBtn) { parseBtn.disabled = false; parseBtn.textContent = '✨ Parse Recipe'; }
+  }
 }
 
 async function importFromUrl() {
