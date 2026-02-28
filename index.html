@@ -3386,7 +3386,7 @@ async function pushToCloud() {
 async function pullFromCloud() {
   if (!state.jsonbinId) return;
   try {
-    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}`);
+    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}?_=${Date.now()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const remote = await res.json();
     if (!remote) return;
