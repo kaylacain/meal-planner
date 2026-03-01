@@ -4489,12 +4489,8 @@ async function importFromUrl() {
   status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Fetching and parsing recipe…</span>`;
 
   try {
-    // Fetch the page via a CORS proxy (public, read-only)
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('Could not fetch the page. The site may block external requests.');
-    const data = await res.json();
-    const html = data.contents || '';
+    // Fetch the page via a CORS proxy — try multiple in case one is down
+    const html = await fetchViaProxy(url);
 
     // Strip tags to plain text (simple approach)
     const div = document.createElement('div');
@@ -4687,6 +4683,42 @@ function toast(msg, type = '') {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  CORS PROXY HELPER — tries multiple proxies in sequence
+// ══════════════════════════════════════════════════════════════════════
+
+async function fetchViaProxy(url) {
+  const encoded = encodeURIComponent(url);
+  const proxies = [
+    async () => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encoded}`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error('allorigins failed');
+      const d = await r.json();
+      return d.contents || '';
+    },
+    async () => {
+      const r = await fetch(`https://corsproxy.io/?url=${encoded}`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error('corsproxy failed');
+      return await r.text();
+    },
+    async () => {
+      const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error('thingproxy failed');
+      return await r.text();
+    },
+  ];
+
+  let lastErr;
+  for (const proxy of proxies) {
+    try {
+      return await proxy();
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+  throw new Error('Could not fetch the page — all proxies failed. The site may block external requests.');
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  SLOT MODAL — PHOTO & URL IMPORT WRAPPERS
 // ══════════════════════════════════════════════════════════════════════
 
@@ -4822,12 +4854,9 @@ async function importFromUrlSlot() {
   }
   status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Fetching and parsing recipe…</span>`;
   try {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('Could not fetch the page. The site may block external requests.');
-    const data = await res.json();
+    const html = await fetchViaProxy(url);
     const div = document.createElement('div');
-    div.innerHTML = data.contents || '';
+    div.innerHTML = html;
     div.querySelectorAll('script,style,nav,footer,header,aside').forEach(el => el.remove());
     const snippet = (div.innerText || div.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 4000);
     if (!snippet) throw new Error('Page appears empty or could not be read.');
