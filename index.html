@@ -7,6 +7,7 @@
 <title>Meal Planner</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥗</text></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥗</text></svg>" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root {
     --bg: #f5f5f0;
@@ -1542,12 +1543,219 @@
     margin-bottom: 14px;
     line-height: 1.4;
   }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  #auth-screen.hidden { display: none; }
+
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .auth-logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .auth-logo-icon {
+    font-size: 2.8rem;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .auth-logo-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .auth-logo-sub {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+
+  .auth-form label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .auth-form input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .auth-form input:focus { border-color: var(--accent); }
+
+  .auth-submit {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 99px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.925rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 4px;
+  }
+
+  .auth-submit:hover { background: var(--accent-dark); }
+  .auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .auth-toggle {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+
+  .auth-toggle a {
+    color: var(--accent-dark);
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .auth-toggle a:hover { text-decoration: underline; }
+
+  .auth-error {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    display: none;
+  }
+
+  .auth-success {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    color: var(--accent-dark);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    display: none;
+  }
+
+  .auth-forgot {
+    text-align: right;
+    font-size: 0.78rem;
+    margin-top: -8px;
+  }
+
+  .auth-forgot a {
+    color: var(--text-muted);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .auth-forgot a:hover { color: var(--accent-dark); text-decoration: underline; }
+
+  .auth-setup-note {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: none;
+    line-height: 1.5;
+  }
+
+  .auth-setup-note.show { display: block; }
+  .auth-setup-note strong { color: var(--text); }
 </style>
 </head>
 <body>
 
 <!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-icon">🥗</span>
+      <div class="auth-logo-title">Meal Planner</div>
+      <div class="auth-logo-sub">Sign in to access your meal plan</div>
+    </div>
+
+    <div id="auth-setup-note" class="auth-setup-note">
+      <strong>First-time setup:</strong> Enter your Supabase Project URL and anon key below to connect.
+      You can find these in your Supabase project under <strong>Settings → API</strong>.
+    </div>
+
+    <!-- Supabase connection fields (shown until configured) -->
+    <div id="auth-supabase-fields" style="display:none;margin-bottom:16px;">
+      <div class="auth-form">
+        <div>
+          <label>Supabase Project URL</label>
+          <input type="url" id="auth-supabase-url" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+        </div>
+        <div>
+          <label>Supabase Anon Key</label>
+          <input type="password" id="auth-supabase-key" placeholder="eyJ…" autocomplete="off" />
+        </div>
+        <button class="auth-submit" onclick="saveSupabaseConfig()">Connect</button>
+      </div>
+      <div style="text-align:center;margin-top:14px;font-size:0.78rem;color:var(--text-muted);">— then sign in below —</div>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-success" class="auth-success"></div>
+
+    <div class="auth-form" id="auth-signin-form">
+      <div>
+        <label id="auth-email-label">Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')authSubmit()" />
+      </div>
+      <div id="auth-password-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()" />
+      </div>
+      <div class="auth-forgot" id="auth-forgot-row">
+        <a onclick="authForgotPassword()">Forgot password?</a>
+      </div>
+      <button class="auth-submit" id="auth-submit-btn" onclick="authSubmit()">Sign in</button>
+    </div>
+
+    <div class="auth-toggle" id="auth-toggle">
+      Don't have an account? <a onclick="authToggleMode()">Sign up</a>
+    </div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -1602,26 +1810,39 @@
       </div>
     </div>
 
-    <!-- Sync section -->
+    <!-- Supabase connection section -->
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <span style="font-size:0.8rem;font-weight:700;">☁️ Sync with partner</span>
-        <span style="font-size:0.75rem;color:var(--text-muted);">— share your meal plan across devices, no account needed</span>
+        <span style="font-size:0.8rem;font-weight:700;">☁️ Supabase Connection</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">— your data is stored securely in the cloud</span>
       </div>
-      <div class="settings-row">
-        <div class="form-group" style="flex:2;min-width:240px;">
-          <label>Sync ID <span style="font-weight:400;color:var(--text-muted);">(share this with your partner)</span></label>
-          <input type="text" id="settings-jsonbin-id" placeholder="Create a new bin to get an ID…" />
+      <div class="settings-row" style="margin-bottom:8px;">
+        <div class="form-group" style="flex:2;min-width:280px;">
+          <label>Project URL</label>
+          <input type="url" id="settings-supabase-url" placeholder="https://xxxx.supabase.co" autocomplete="off" />
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
+      </div>
+      <div class="settings-row" style="margin-bottom:8px;">
+        <div class="form-group" style="flex:2;min-width:280px;">
+          <label>Anon Key</label>
+          <input type="password" id="settings-supabase-key" placeholder="eyJ…" autocomplete="off" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end;">
           <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-          <button class="btn btn-secondary btn-sm" onclick="createNewBin()" title="Create a new sync bin and auto-fill the ID">+ New bin</button>
         </div>
       </div>
-      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-        Click <strong>+ New bin</strong> to create a shared storage bin. Share the Sync ID with your partner — they paste it in their Settings and save.
-        Changes auto-sync within ~3 seconds. Your API keys are never synced.
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+        These are stored only on this device, never synced. Find them in your Supabase project under <strong>Settings → API</strong>.
       </p>
+    </div>
+
+    <!-- Account section -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <span style="font-size:0.8rem;font-weight:700;">👤 Account</span>
+        <span id="settings-user-email" style="font-size:0.78rem;color:var(--text-muted);margin-left:8px;"></span>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="signOut()">Sign out</button>
     </div>
   </div>
 </div>
@@ -2073,6 +2294,307 @@ const GROCERY_CATEGORIES = {
   other: { label: 'Other', emoji: '🛒', keywords: [] }
 };
 
+// ══════════════════════════════════════════════════════════════════════
+//  SUPABASE AUTH
+// ══════════════════════════════════════════════════════════════════════
+
+let _supabase = null;      // Supabase client instance
+let _currentUser = null;   // Current authenticated user
+let _authMode = 'signin';  // 'signin' | 'signup' | 'reset'
+let _pushTimer = null;
+let _pollTimer = null;
+
+function initSupabase() {
+  const url = localStorage.getItem('sbUrl') || '';
+  const key = localStorage.getItem('sbKey') || '';
+  if (!url || !key) { _supabase = null; return false; }
+  try {
+    _supabase = supabase.createClient(url, key);
+    return true;
+  } catch(e) {
+    _supabase = null;
+    return false;
+  }
+}
+
+function saveSupabaseConfig() {
+  const url = document.getElementById('auth-supabase-url').value.trim();
+  const key = document.getElementById('auth-supabase-key').value.trim();
+  if (!url || !key) { showAuthError('Please enter both your Project URL and Anon Key.'); return; }
+  localStorage.setItem('sbUrl', url);
+  localStorage.setItem('sbKey', key);
+  // Also update settings fields
+  const su = document.getElementById('settings-supabase-url');
+  const sk = document.getElementById('settings-supabase-key');
+  if (su) su.value = url;
+  if (sk) sk.value = key;
+  initSupabase();
+  document.getElementById('auth-supabase-fields').style.display = 'none';
+  document.getElementById('auth-setup-note').classList.remove('show');
+  clearAuthMessages();
+  showAuthSuccess('Connected! Now sign in or create an account.');
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('auth-success').style.display = 'none';
+}
+
+function clearAuthMessages() {
+  const e = document.getElementById('auth-error');
+  const s = document.getElementById('auth-success');
+  if (e) e.style.display = 'none';
+  if (s) s.style.display = 'none';
+}
+
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-success');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+function authToggleMode() {
+  _authMode = _authMode === 'signin' ? 'signup' : 'signin';
+  const btn = document.getElementById('auth-submit-btn');
+  const toggle = document.getElementById('auth-toggle');
+  const forgotRow = document.getElementById('auth-forgot-row');
+  const pwGroup = document.getElementById('auth-password-group');
+  clearAuthMessages();
+  if (_authMode === 'signup') {
+    btn.textContent = 'Create account';
+    toggle.innerHTML = 'Already have an account? <a onclick="authToggleMode()">Sign in</a>';
+    if (forgotRow) forgotRow.style.display = 'none';
+  } else {
+    btn.textContent = 'Sign in';
+    toggle.innerHTML = "Don't have an account? <a onclick=\"authToggleMode()\">Sign up</a>";
+    if (forgotRow) forgotRow.style.display = '';
+    if (pwGroup) pwGroup.style.display = '';
+  }
+}
+
+async function authSubmit() {
+  if (!_supabase) { showAuthError('Supabase is not configured. Please enter your Project URL and Anon Key above.'); return; }
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-submit-btn');
+
+  if (!email) { showAuthError('Please enter your email.'); return; }
+  if (_authMode !== 'reset' && !password) { showAuthError('Please enter your password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = _authMode === 'signup' ? 'Creating account…' : 'Signing in…';
+  clearAuthMessages();
+
+  try {
+    if (_authMode === 'signup') {
+      const { data, error } = await _supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      if (data.user && data.session) {
+        await onAuthSuccess(data.session);
+      } else {
+        showAuthSuccess('Account created! Check your email to confirm, then sign in.');
+        _authMode = 'signin';
+        btn.textContent = 'Sign in';
+      }
+    } else {
+      const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await onAuthSuccess(data.session);
+    }
+  } catch(e) {
+    showAuthError(e.message || 'Authentication failed.');
+    btn.disabled = false;
+    btn.textContent = _authMode === 'signup' ? 'Create account' : 'Sign in';
+  }
+}
+
+async function authForgotPassword() {
+  if (!_supabase) { showAuthError('Supabase is not configured.'); return; }
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email) { showAuthError('Enter your email address first.'); return; }
+  clearAuthMessages();
+  try {
+    const { error } = await _supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    showAuthSuccess('Password reset email sent! Check your inbox.');
+  } catch(e) {
+    showAuthError(e.message || 'Failed to send reset email.');
+  }
+}
+
+async function onAuthSuccess(session) {
+  _currentUser = session.user;
+  // Hide auth screen
+  document.getElementById('auth-screen').classList.add('hidden');
+  // Update settings panel email display
+  const emailEl = document.getElementById('settings-user-email');
+  if (emailEl) emailEl.textContent = _currentUser.email || '';
+  // Load data from Supabase, then render
+  await pullFromCloud();
+  renderWeekGrid();
+  renderGroceryList();
+  // Start poll
+  if (_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(pullFromCloud, 30000);
+  setSyncStatus('synced', `Signed in as ${_currentUser.email}`);
+  const syncBtn = document.getElementById('sync-now-btn');
+  if (syncBtn) syncBtn.style.display = '';
+}
+
+async function signOut() {
+  if (_supabase) await _supabase.auth.signOut();
+  _currentUser = null;
+  if (_pollTimer) clearInterval(_pollTimer);
+  if (_pushTimer) clearTimeout(_pushTimer);
+  setSyncStatus('', 'Not signed in');
+  const syncBtn = document.getElementById('sync-now-btn');
+  if (syncBtn) syncBtn.style.display = 'none';
+  // Show auth screen
+  document.getElementById('auth-screen').classList.remove('hidden');
+  clearAuthMessages();
+  toggleSettings(); // close settings bar if open
+  toast('Signed out', 'success');
+}
+
+// ── Cloud sync helpers ──
+
+function getSharedData() {
+  return {
+    plans: state.plans,
+    favorites: state.favorites,
+    history: state.history,
+    customRecipes: state.customRecipes,
+    groceryChecked: state.groceryChecked,
+    _updatedAt: Date.now(),
+  };
+}
+
+function setSyncStatus(status, label) {
+  const el = document.getElementById('sync-status');
+  const lb = document.getElementById('sync-label');
+  if (!el) return;
+  el.className = 'sync-status' + (status ? ' ' + status : '');
+  el.title = label;
+  if (lb) lb.textContent = label;
+}
+
+function relativeTime(ts) {
+  if (!ts) return 'never';
+  const diff = Math.round((Date.now() - ts) / 1000);
+  if (diff < 10) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  return `${Math.round(diff / 3600)}h ago`;
+}
+
+async function pushToCloud() {
+  if (!_supabase || !_currentUser) return;
+  setSyncStatus('syncing', 'Syncing…');
+  try {
+    const payload = {
+      user_id: _currentUser.id,
+      data: getSharedData(),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await _supabase
+      .from('meal_planner_data')
+      .upsert(payload, { onConflict: 'user_id' });
+    if (error) throw error;
+    state.lastSyncedAt = Date.now();
+    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
+    raw.lastSyncedAt = state.lastSyncedAt;
+    localStorage.setItem('mealplanner', JSON.stringify(raw));
+    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+  } catch(e) {
+    setSyncStatus('error', `Sync error: ${e.message}`);
+  }
+}
+
+async function pullFromCloud() {
+  if (!_supabase || !_currentUser) return;
+  try {
+    const { data, error } = await _supabase
+      .from('meal_planner_data')
+      .select('data, updated_at')
+      .eq('user_id', _currentUser.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+    if (!data) return; // first time — no data yet
+
+    const remote = data.data;
+    const remoteTs = remote._updatedAt || new Date(data.updated_at).getTime() || 0;
+    if (remoteTs <= state.lastSyncedAt) {
+      setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+      return;
+    }
+
+    // Apply remote data
+    if (remote.plans) {
+      state.plans = remote.plans;
+    } else if (remote.plan) {
+      state.plans = { 0: remote.plan, 1: state.plans[1] || {} };
+    }
+    // Migrate single-object slots to arrays
+    [0, 1].forEach(w => {
+      if (!state.plans[w]) state.plans[w] = {};
+      Object.keys(state.plans[w]).forEach(slotKey => {
+        const val = state.plans[w][slotKey];
+        if (val && !Array.isArray(val)) state.plans[w][slotKey] = [val];
+      });
+    });
+    state.plan          = state.plans[state.weekOffset];
+    state.favorites     = remote.favorites     || state.favorites;
+    state.history       = remote.history       || state.history;
+    state.customRecipes = remote.customRecipes || state.customRecipes;
+    state.groceryChecked= remote.groceryChecked|| state.groceryChecked;
+    state.lastSyncedAt  = remoteTs;
+
+    // Persist locally
+    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
+    Object.assign(raw, {
+      plans: state.plans, favorites: state.favorites, history: state.history,
+      customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
+      lastSyncedAt: state.lastSyncedAt,
+    });
+    localStorage.setItem('mealplanner', JSON.stringify(raw));
+
+    // Re-render
+    renderWeekGrid();
+    renderGroceryList();
+    renderFavorites();
+    renderCustomRecipes();
+    renderHistory();
+    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
+  } catch(e) {
+    setSyncStatus('error', `Sync error: ${e.message}`);
+  }
+}
+
+function schedulePush() {
+  if (!_supabase || !_currentUser) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushToCloud, 3000);
+  setSyncStatus('syncing', 'Pending…');
+}
+
+async function manualSync() {
+  if (!_supabase || !_currentUser) {
+    toast('Sign in to sync', 'error');
+    return;
+  }
+  const btn = document.getElementById('sync-now-btn');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+  await pullFromCloud();
+  await pushToCloud();
+  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+}
+
 let state = {
   plans: { 0: {}, 1: {} }, // 0 = this week, 1 = next week
   plan: {},  // pointer to plans[weekOffset] — set in loadFromStorage
@@ -2087,8 +2609,6 @@ let state = {
   currentView: 'week',
   currentRecipeTab: 'mine',
   apiKey: '',
-  // Sync
-  jsonbinId: '',
   lastSyncedAt: 0,
   // Integrations
   todoistKey: '',
@@ -2098,18 +2618,38 @@ let state = {
 //  INIT
 // ══════════════════════════════════════════════════════════════════════
 
-function init() {
+async function init() {
   loadFromStorage();
-  renderWeekGrid();
-  renderGroceryList();
   updateWeekTitle();
   // Init ingredient builders
   initIngBuilder('new-recipe-ing-rows');
   initIngBuilder('slot-ing-rows');
   initIngBuilder('slot-recipe-ing-rows');
-  // Start sync
-  syncSetup();
-  if (state.jsonbinId) pullFromCloud();
+
+  // Initialize Supabase and check for existing session
+  const sbReady = initSupabase();
+  if (!sbReady) {
+    // No Supabase config yet — show setup fields on auth screen
+    document.getElementById('auth-supabase-fields').style.display = 'block';
+    document.getElementById('auth-setup-note').classList.add('show');
+    return; // Auth screen stays visible
+  }
+
+  // Check for existing session (e.g. page refresh)
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    await onAuthSuccess(session);
+  }
+  // If no session, auth screen stays visible (default)
+
+  // Listen for auth changes (e.g. email confirmation link clicked)
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session && !_currentUser) {
+      await onAuthSuccess(session);
+    } else if (event === 'SIGNED_OUT') {
+      _currentUser = null;
+    }
+  });
 }
 
 function loadFromStorage() {
@@ -2137,15 +2677,20 @@ function loadFromStorage() {
     state.customRecipes = saved.customRecipes || [];
     state.groceryChecked = saved.groceryChecked || {};
     state.apiKey = saved.apiKey || '';
-    state.jsonbinId = saved.jsonbinId || '';
     state.lastSyncedAt = saved.lastSyncedAt || 0;
     state.todoistKey = saved.todoistKey || '';
   } catch(e) {}
 
   // Populate settings fields
   document.getElementById('settings-api-key').value = state.apiKey;
-  document.getElementById('settings-jsonbin-id').value = state.jsonbinId;
   document.getElementById('settings-todoist-key').value = state.todoistKey;
+  // Supabase fields (stored in separate localStorage keys)
+  const sbUrl = localStorage.getItem('sbUrl') || '';
+  const sbKey = localStorage.getItem('sbKey') || '';
+  const su = document.getElementById('settings-supabase-url');
+  const sk = document.getElementById('settings-supabase-key');
+  if (su) su.value = sbUrl;
+  if (sk) sk.value = sbKey;
 }
 
 function saveToStorage() {
@@ -2156,11 +2701,10 @@ function saveToStorage() {
     customRecipes: state.customRecipes,
     groceryChecked: state.groceryChecked,
     apiKey: state.apiKey,
-    jsonbinId: state.jsonbinId,
     lastSyncedAt: state.lastSyncedAt,
     todoistKey: state.todoistKey,
   }));
-  // Trigger debounced cloud push if sync is configured
+  // Trigger debounced cloud push if signed in
   schedulePush();
 }
 
@@ -2214,23 +2758,31 @@ function toggleSettings() {
 function saveSettings() {
   state.apiKey = document.getElementById('settings-api-key').value.trim();
   state.todoistKey = document.getElementById('settings-todoist-key').value.trim();
-  const newBinId = document.getElementById('settings-jsonbin-id').value.trim();
-  const syncChanged = newBinId !== state.jsonbinId;
-  state.jsonbinId = newBinId;
-  // Save directly (not via saveToStorage to avoid spurious push before ID is set)
+
+  // Supabase config (stored separately, never synced to cloud)
+  const newUrl = (document.getElementById('settings-supabase-url').value || '').trim();
+  const newKey = (document.getElementById('settings-supabase-key').value || '').trim();
+  const sbChanged = newUrl !== (localStorage.getItem('sbUrl') || '') ||
+                    newKey !== (localStorage.getItem('sbKey') || '');
+  if (newUrl) localStorage.setItem('sbUrl', newUrl);
+  if (newKey) localStorage.setItem('sbKey', newKey);
+
+  // Save app data directly (not via saveToStorage to avoid spurious push)
   localStorage.setItem('mealplanner', JSON.stringify({
     plans: state.plans, favorites: state.favorites, history: state.history,
     customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
-    apiKey: state.apiKey,
-    jsonbinId: state.jsonbinId, lastSyncedAt: state.lastSyncedAt,
+    apiKey: state.apiKey, lastSyncedAt: state.lastSyncedAt,
     todoistKey: state.todoistKey,
   }));
-  toast('Settings saved!', 'success');
-  toggleSettings();
-  if (syncChanged && state.jsonbinId) {
-    syncSetup(); // restart sync
-    pullFromCloud();
+
+  // Re-init Supabase if credentials changed
+  if (sbChanged && newUrl && newKey) {
+    initSupabase();
+    toast('Supabase reconnected — sign in again if needed.', 'success');
+  } else {
+    toast('Settings saved!', 'success');
   }
+  toggleSettings();
 }
 
 
@@ -4237,189 +4789,6 @@ function toast(msg, type = '') {
   el.textContent = msg;
   ct.appendChild(el);
   setTimeout(() => el.remove(), 3200);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  CLOUD SYNC (npoint.io — no account needed)
-// ══════════════════════════════════════════════════════════════════════
-
-const NPOINT_BASE = 'https://api.npoint.io';
-let _pushTimer = null;
-let _pollTimer = null;
-
-// Fields that sync to the cloud (API keys stay local)
-function getSharedData() {
-  return {
-    plans: state.plans,
-    favorites: state.favorites,
-    history: state.history,
-    customRecipes: state.customRecipes,
-    groceryChecked: state.groceryChecked,
-    _updatedAt: Date.now(),
-  };
-}
-
-function setSyncStatus(status, label) {
-  const el = document.getElementById('sync-status');
-  const lb = document.getElementById('sync-label');
-  if (!el) return;
-  el.className = 'sync-status' + (status ? ' ' + status : '');
-  el.title = label;
-  if (lb) lb.textContent = label;
-}
-
-function relativeTime(ts) {
-  if (!ts) return 'never';
-  const diff = Math.round((Date.now() - ts) / 1000);
-  if (diff < 10) return 'just now';
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
-  return `${Math.round(diff / 3600)}h ago`;
-}
-
-async function pushToCloud() {
-  if (!state.jsonbinId) return;
-  setSyncStatus('syncing', 'Syncing…');
-  try {
-    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(getSharedData()),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    state.lastSyncedAt = Date.now();
-    // Save lastSyncedAt locally without re-triggering push
-    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
-    raw.lastSyncedAt = state.lastSyncedAt;
-    localStorage.setItem('mealplanner', JSON.stringify(raw));
-    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
-  } catch(e) {
-    setSyncStatus('error', `Sync error: ${e.message}`);
-  }
-}
-
-async function pullFromCloud() {
-  if (!state.jsonbinId) return;
-  try {
-    const res = await fetch(`${NPOINT_BASE}/${state.jsonbinId}?_=${Date.now()}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const remote = await res.json();
-    if (!remote) return;
-
-    // Only apply if remote is newer than last sync
-    const remoteTs = remote._updatedAt || 0;
-    if (remoteTs <= state.lastSyncedAt) {
-      setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
-      return;
-    }
-
-    // Apply remote data — handle both new (plans) and old (plan) format
-    if (remote.plans) {
-      state.plans = remote.plans;
-    } else if (remote.plan) {
-      state.plans = { 0: remote.plan, 1: state.plans[1] || {} };
-    }
-    // Migrate any single-object slots to arrays (multi-recipe support)
-    [0, 1].forEach(w => {
-      if (!state.plans[w]) state.plans[w] = {};
-      Object.keys(state.plans[w]).forEach(slotKey => {
-        const val = state.plans[w][slotKey];
-        if (val && !Array.isArray(val)) state.plans[w][slotKey] = [val];
-      });
-    });
-    state.plan          = state.plans[state.weekOffset];
-    state.favorites     = remote.favorites     || state.favorites;
-    state.history       = remote.history       || state.history;
-    state.customRecipes = remote.customRecipes || state.customRecipes;
-    state.groceryChecked= remote.groceryChecked|| state.groceryChecked;
-    state.lastSyncedAt  = remoteTs;
-
-    // Persist locally (direct, not via saveToStorage to avoid push loop)
-    const raw = JSON.parse(localStorage.getItem('mealplanner') || '{}');
-    Object.assign(raw, {
-      plans: state.plans, favorites: state.favorites, history: state.history,
-      customRecipes: state.customRecipes, groceryChecked: state.groceryChecked,
-      lastSyncedAt: state.lastSyncedAt,
-    });
-    localStorage.setItem('mealplanner', JSON.stringify(raw));
-
-    // Re-render everything
-    renderWeekGrid();
-    renderGroceryList();
-    renderFavorites();
-    renderCustomRecipes();
-    renderHistory();
-    setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
-  } catch(e) {
-    setSyncStatus('error', `Sync error: ${e.message}`);
-  }
-}
-
-// Debounced push — called by saveToStorage
-function schedulePush() {
-  if (!state.jsonbinId) return;
-  clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(pushToCloud, 3000);
-  setSyncStatus('syncing', 'Pending…');
-}
-
-function syncSetup() {
-  // Clear any existing poll timer
-  if (_pollTimer) clearInterval(_pollTimer);
-
-  const syncBtn = document.getElementById('sync-now-btn');
-
-  if (!state.jsonbinId) {
-    setSyncStatus('', 'Not configured');
-    if (syncBtn) syncBtn.style.display = 'none';
-    return;
-  }
-
-  if (syncBtn) syncBtn.style.display = '';
-
-  setSyncStatus('syncing', 'Connecting…');
-  // Poll every 10 seconds for remote changes
-  _pollTimer = setInterval(pullFromCloud, 10000);
-  // Update the relative time label every minute
-  setInterval(() => {
-    if (state.lastSyncedAt) setSyncStatus('synced', `Synced ${relativeTime(state.lastSyncedAt)}`);
-  }, 60000);
-}
-
-async function manualSync() {
-  if (!state.jsonbinId) {
-    toast('Set up a Sync ID in ⚙️ Settings first', 'error');
-    return;
-  }
-  const btn = document.getElementById('sync-now-btn');
-  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
-  await pullFromCloud();
-  await pushToCloud();
-  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-}
-
-async function createNewBin() {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Creating…';
-  try {
-    const res = await fetch(`https://www.npoint.io/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: getSharedData(), title: 'Meal Planner' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const binId = data.token;
-    if (!binId) throw new Error('No bin ID returned');
-    document.getElementById('settings-jsonbin-id').value = binId;
-    toast(`✅ Bin created! Share this ID with your partner: ${binId}`, 'success');
-  } catch(e) {
-    toast(`Failed to create bin: ${e.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '+ New bin';
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
