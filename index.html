@@ -4660,17 +4660,17 @@ async function parseRecipeFromHtml(html, sourceUrl) {
   "name": "Recipe name",
   "time": "total cook/prep time as written on the page",
   "servings": 4,
-  "ingredients": ["1/4 cup flour", "1/2 tbsp olive oil", "3/4 whole egg"],
+  "ingredients": ["2 cups flour", "3 tbsp olive oil", "3 whole eggs"],
   "notes": "COPY THE INSTRUCTIONS VERBATIM FROM THE PAGE. Do not summarize, paraphrase, or rewrite. Reproduce the exact wording of every step, including temperatures, times, and techniques.",
   "url": "${sourceUrl}"
 }
 
 Rules for ingredients:
-- Ingredients must be amounts PER SERVING (divide total quantity by number of servings)
-- Format each as "qty unit name" e.g. "1/4 cup flour", "1/2 tbsp butter"
+- List ingredients for the FULL recipe yield (not per serving) — exactly as they appear on the page
+- Format each as "qty unit name" e.g. "2 cups flour", "3 tbsp butter", "1/2 tsp salt"
 - Use standard units: tsp, tbsp, cup, oz, lb, g, kg, ml, liter, clove, slice, can, bunch, pinch, piece
-- If there's no unit (e.g. "3 eggs" for 4 servings), write "3/4 whole egg"
-- "servings" must be an integer — the number of servings the full recipe makes
+- If there's no unit (e.g. "3 eggs"), write "3 whole eggs"
+- "servings" must be an integer — the number of servings the full recipe makes (e.g. 4 if it says "serves 4")
 
 Webpage text:
 ${snippet}`;
@@ -4683,8 +4683,8 @@ ${snippet}`;
   if (!parsed.name) throw new Error('No recipe name found on page.');
 
   const defaultServings = Math.max(1, parseInt(parsed.servings) || 1);
-  // Ingredients are already per-serving from the prompt
-  const normalizedIngredients = parsed.ingredients || [];
+  // Divide full-recipe totals down to per-1-serving amounts
+  const normalizedIngredients = normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
 
   return { parsed, defaultServings, normalizedIngredients };
 }
@@ -4786,12 +4786,9 @@ function renderSlotPhotoThumbnails() {
 }
 
 // Fills the slot modal recipe form fields from a parsed recipe object
-function _fillSlotRecipeForm(parsed, sourceUrl, precomputedServings) {
-  const defaultServings = precomputedServings || Math.max(1, parseInt(parsed.servings) || 1);
-  // ingredients already normalized to per-serving if coming from parseRecipeFromHtml
-  const ingredients = precomputedServings
-    ? (parsed.ingredients || [])
-    : normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
+function _fillSlotRecipeForm(parsed, sourceUrl) {
+  const defaultServings = Math.max(1, parseInt(parsed.servings) || 1);
+  const ingredients = normalizeIngredientsToOneServing(parsed.ingredients || [], defaultServings);
   document.getElementById('slot-recipe-name').value = parsed.name || '';
   document.getElementById('slot-recipe-time').value = parsed.time || '';
   document.getElementById('slot-recipe-url').value = sourceUrl || '';
@@ -4822,7 +4819,7 @@ async function parseSlotPhotosWithClaude() {
         type: 'image',
         source: { type: 'base64', media_type: mediaType, data: base64 },
       })),
-      { type: 'text', text: `Extract the recipe and return ONLY a valid JSON object (no markdown):\n{"name":"...","time":"...","servings":4,"ingredients":["1/4 cup flour",...],"notes":"COPY THE INSTRUCTIONS VERBATIM exactly as written. Do not summarize or paraphrase."}\nIngredients must be amounts PER SERVING (total ÷ servings). "servings" = integer.` },
+      { type: 'text', text: `Extract the recipe and return ONLY a valid JSON object (no markdown):\n{"name":"...","time":"...","servings":4,"ingredients":["2 cups flour",...],"notes":"COPY THE INSTRUCTIONS VERBATIM exactly as written. Do not summarize or paraphrase."}\nList ingredients for the FULL recipe yield (not per serving). "servings" = integer total serving count.` },
     ];
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -4865,8 +4862,8 @@ async function importFromUrlSlot() {
   status.innerHTML = `<span><div class="spinner dark" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div> Fetching and parsing recipe…</span>`;
   try {
     const html = await fetchViaProxy(url);
-    const { parsed, defaultServings } = await parseRecipeFromHtml(html, url);
-    const ds = _fillSlotRecipeForm(parsed, url, defaultServings);
+    const { parsed } = await parseRecipeFromHtml(html, url);
+    const ds = _fillSlotRecipeForm(parsed, url);
     document.getElementById('slot-url-import-input').value = '';
     status.innerHTML = `<span style="color:var(--accent-dark);">✅ Recipe imported! Review and click Save &amp; Add to Plan.</span>`;
   } catch(e) {
